@@ -1168,7 +1168,7 @@ pre .javascript .function {
 }
 .links-of-author a::before,
 .links-of-author span.exturl::before {
-  background: #8a30ff;
+  background: #f4a7ff;
   border-radius: 50%;
   content: ' ';
   display: inline-block;
@@ -2571,6 +2571,21 @@ body {
   background-position: 50% 50%;
 }
 .main-inner {
-  background: rgba(255,255,255,0.14);
-  border-radius: 12px;
+  background: rgba(255,255,255,0.2) !important;
+}
+.post-block {
+  background: rgba(255,255,255,0.6) !important;
+}
+.header-inner {
+  background: rgba(255,255,255,0.2) !important;
+}
+.sidebar {
+  background: rgba(255,255,255,0.2) !important;
+}
+.comments {
+  background: rgba(255,255,255,0.6) !important;
+}
+.post-block,
+.comments {
+  border-radius: 10px !important; /* 让边角圆润一点 */
 }
