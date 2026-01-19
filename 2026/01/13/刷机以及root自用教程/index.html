@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 8.1.1">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"alffl1st.github.io","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="从去年到现在，我入刷机这个圈子也有小一年了，总说从刷机小白变成刷机大佬只需要一次黑砖，但实际上我也是砖了几十次才慢慢了解到其中的各种原理的，现在算是半只脚入了这个门槛了，这篇博客会跟随我以后的刷机经历不断更新的，以后相关的内容都会添在后续。 0.刷机前的必要准备——解锁bootloader我之前刚开始刷机的时候使用的设备是红米的note7，那时候小米的解锁政策还很松，大部分时候我还是会推荐用小米系">
+<meta property="og:type" content="article">
+<meta property="og:title" content="刷机以及root自用教程">
+<meta property="og:url" content="http://alffl1st.github.io/2026/01/13/%E5%88%B7%E6%9C%BA%E4%BB%A5%E5%8F%8Aroot%E8%87%AA%E7%94%A8%E6%95%99%E7%A8%8B/index.html">
+<meta property="og:site_name" content="ALFFL1st">
+<meta property="og:description" content="从去年到现在，我入刷机这个圈子也有小一年了，总说从刷机小白变成刷机大佬只需要一次黑砖，但实际上我也是砖了几十次才慢慢了解到其中的各种原理的，现在算是半只脚入了这个门槛了，这篇博客会跟随我以后的刷机经历不断更新的，以后相关的内容都会添在后续。 0.刷机前的必要准备——解锁bootloader我之前刚开始刷机的时候使用的设备是红米的note7，那时候小米的解锁政策还很松，大部分时候我还是会推荐用小米系">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://alffl1st.github.io/2026/01/13/%E5%88%B7%E6%9C%BA%E4%BB%A5%E5%8F%8Aroot%E8%87%AA%E7%94%A8%E6%95%99%E7%A8%8B/images/64c35166f3a85a75420e4b1af5738fe43e96acd5.jpg">
+<meta property="og:image" content="http://alffl1st.github.io/2026/01/13/%E5%88%B7%E6%9C%BA%E4%BB%A5%E5%8F%8Aroot%E8%87%AA%E7%94%A8%E6%95%99%E7%A8%8B/images/c6dbd39fd1611aa3195708c0893fe6e180ec1d4a.jpg">
+<meta property="og:image" content="http://alffl1st.github.io/2026/01/13/%E5%88%B7%E6%9C%BA%E4%BB%A5%E5%8F%8Aroot%E8%87%AA%E7%94%A8%E6%95%99%E7%A8%8B/images/5f18bdfcc60d8bc85df4a75a7f6c9c4f63ce82eb.jpg">
+<meta property="og:image" content="http://alffl1st.github.io/2026/01/13/%E5%88%B7%E6%9C%BA%E4%BB%A5%E5%8F%8Aroot%E8%87%AA%E7%94%A8%E6%95%99%E7%A8%8B/images/2026-01-19-14-39-42-PixPin_2026-01-19_14-39-33.jpg">
+<meta property="og:image" content="http://alffl1st.github.io/2026/01/13/%E5%88%B7%E6%9C%BA%E4%BB%A5%E5%8F%8Aroot%E8%87%AA%E7%94%A8%E6%95%99%E7%A8%8B/images/2026-01-19-14-41-25-PixPin_2026-01-19_14-41-22.jpg">
+<meta property="og:image" content="http://alffl1st.github.io/2026/01/13/%E5%88%B7%E6%9C%BA%E4%BB%A5%E5%8F%8Aroot%E8%87%AA%E7%94%A8%E6%95%99%E7%A8%8B/images/2026-01-19-14-43-44-PixPin_2026-01-19_14-43-42.jpg">
+<meta property="og:image" content="http://alffl1st.github.io/2026/01/13/%E5%88%B7%E6%9C%BA%E4%BB%A5%E5%8F%8Aroot%E8%87%AA%E7%94%A8%E6%95%99%E7%A8%8B/images/2026-01-19-14-59-15-PixPin_2026-01-19_14-59-11.jpg">
+<meta property="article:published_time" content="2026-01-13T05:23:46.000Z">
+<meta property="article:modified_time" content="2026-01-19T07:58:48.145Z">
+<meta property="article:author" content="ALFFL">
+<meta property="article:tag" content="root">
+<meta property="article:tag" content="刷机">
+<meta property="article:tag" content="环境搭建">
+<meta property="article:tag" content="经验总结">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://alffl1st.github.io/2026/01/13/%E5%88%B7%E6%9C%BA%E4%BB%A5%E5%8F%8Aroot%E8%87%AA%E7%94%A8%E6%95%99%E7%A8%8B/images/64c35166f3a85a75420e4b1af5738fe43e96acd5.jpg">
+
+<link rel="canonical" href="http://alffl1st.github.io/2026/01/13/%E5%88%B7%E6%9C%BA%E4%BB%A5%E5%8F%8Aroot%E8%87%AA%E7%94%A8%E6%95%99%E7%A8%8B/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>刷机以及root自用教程 | ALFFL1st</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">ALFFL1st</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://alffl1st.github.io/2026/01/13/%E5%88%B7%E6%9C%BA%E4%BB%A5%E5%8F%8Aroot%E8%87%AA%E7%94%A8%E6%95%99%E7%A8%8B/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="ALFFL">
+      <meta itemprop="description" content="追求源于热爱">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="ALFFL1st">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          刷机以及root自用教程
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2026-01-13 13:23:46" itemprop="dateCreated datePublished" datetime="2026-01-13T13:23:46+08:00">2026-01-13</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2026-01-19 15:58:48" itemprop="dateModified" datetime="2026-01-19T15:58:48+08:00">2026-01-19</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>从去年到现在，我入刷机这个圈子也有小一年了，总说从刷机小白变成刷机大佬只需要一次黑砖，但实际上我也是砖了几十次才慢慢了解到其中的各种原理的，现在算是半只脚入了这个门槛了，这篇博客会跟随我以后的刷机经历不断更新的，以后相关的内容都会添在后续。</p>
+<h1 id="0-刷机前的必要准备——解锁bootloader"><a href="#0-刷机前的必要准备——解锁bootloader" class="headerlink" title="0.刷机前的必要准备——解锁bootloader"></a>0.刷机前的必要准备——解锁bootloader</h1><p>我之前刚开始刷机的时候使用的设备是红米的note7，那时候小米的解锁政策还很松，大部分时候我还是会推荐用小米系的手机来玩机配环境什么的，但是现在国内几大厂商我只推荐魅族和一加，小米在今年元旦的时候在小米社区已经把申请bl相关的模块完全删除找不到了，也就意味着小米发烧时代完全落幕，传统ov以及底下两个子品牌realme和iqoo也是完全没有解锁的渠道（以上说法排除漏洞解锁的情况），一加虽然加了一层申请政策，但是目前申请难度还是比较低的，基本都能解，魅族手机有内置残血root，酷安某贼大佬的煤油工具箱还能提供解锁相关的功能，所以总体门槛不高，刷机搞root的主体现在就以洋垃圾机型以及漏洞机型还有老小米的为主，这里以小米系举例（因为别的牌子我也没用过），老机型就是先给设备绑定账号，然后使用小米官方解锁工具miunlock进行解锁操作，解锁会清空手机数据，需要提前备份好重要数据，新设备能解都是靠漏洞了，这里就不做讨论</p>
+<p>Q:为什么要解锁？</p>
+<p>A:BL锁是厂商的一种安全机制，bootloader是在手机通电后最先启动的引导程序，负责初始化各种硬件驱动之类的程序，bl锁相当于是对系统的分区和镜像加了一层验证，使其只能加载运行官方签名的系统和分区镜像（比如一会会说到的recovery，还有boot之类的分区镜像），拒绝所有第三方分区和镜像（这就意味着刷机权限锁死，如果用某些方式强刷会因为签名验证不通过导致黑砖，这种很难办），这样大大降低了恶意软件、病毒通过底层系统侵入的风险，保护用户数据和厂商系统的完整性。</p>
+<p>*补：新版本一加似乎也加了防回滚熔断机制，不知道具体还好不好刷</p>
+<h1 id="1-解锁后的第一步——明确卡刷和线刷的概念"><a href="#1-解锁后的第一步——明确卡刷和线刷的概念" class="headerlink" title="1.解锁后的第一步——明确卡刷和线刷的概念"></a>1.解锁后的第一步——明确卡刷和线刷的概念</h1><p>卡刷是在早期普遍有sd卡的时候得名，相当于把刷机包放在存储设备中再接入手机，执行对应的解包和刷机操作，现在不用内存卡了，把刷机包放在内部存储空间也是同理，这是现在手机官方系统更新常用的方式，这里就能引入一个新的概念，那就是recovery模式（恢复模式），这个模式独立于主系统运行，普通用户能使用到的官方recovery一般只有恢复出厂设置这样的选项，来解决没解锁bl情况下的一些黑砖问题，现在的卡刷基本都是用第三方的recovery来完成的</p>
+<p>线刷是使用数据线来进行刷入，一般线刷包会包括多个分区文件，得进入fastboot模式进行每个分区的刷入，一般对刷机比较开放的厂商都会有自己的刷机工具（如miflash）或刷机脚本，如果是进9008深刷的话一般用刷机匣等工具（9008概念一会说）</p>
+<p>Q:recovery启动的原理以及结构是什么？</p>
+<p>A:一般由四个部分组成：精简Linux内核、ramdisk（虚拟内存盘）、recovery主程序、资源文件</p>
+<p>系统中的分区结构如下</p>
+<table>
+<thead>
+<tr>
+<th><strong>分区名称</strong></th>
+<th><strong>作用</strong></th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong><code>/boot</code></strong></td>
+<td>存放主系统的内核和引导文件。</td>
+</tr>
+<tr>
+<td><strong><code>/system</code></strong></td>
+<td>存放 Android 操作系统本身（UI、应用等）。</td>
+</tr>
+<tr>
+<td><strong><code>/recovery</code></strong></td>
+<td><strong>Recovery 专属领地，与 <code>/boot</code> 并列独立。</strong></td>
+</tr>
+<tr>
+<td><strong><code>/data</code></strong></td>
+<td>存放你的照片、微信聊天记录和 App。</td>
+</tr>
+<tr>
+<td><strong><code>/cache</code></strong></td>
+<td>存放系统运行产生的临时垃圾。</td>
+</tr>
+<tr>
+<td><strong><code>/misc</code></strong></td>
+<td><strong>关键桥梁</strong>。存放启动标志位（比如：下次开机是进系统还是进 Recovery）。</td>
+</tr>
+</tbody></table>
+<p>关于其是如何启动的，正常来说长按电源加音量（上下键可能不同厂商不一样）时，手机会先启动bootloader引导程序，然后检查&#x2F;misc分区的指令或者判断你物理按键的组合（可能由主板结构决定），如果识别到recovery请求，就不会加载进boot分区，而是直接加载进recovery分区，然后recovery内核启动，最后让屏幕上显示操作菜单</p>
+<h1 id="2-找包和载工具"><a href="#2-找包和载工具" class="headerlink" title="2.找包和载工具"></a>2.找包和载工具</h1><p>在学习各种刷机包的移植之前，我们很大一部分精力都在不断找包的过程中，这里分享一个某贼的萤火虫资源站：<a target="_blank" rel="noopener" href="https://www.yhcres.top/02-%E6%89%8B%E6%9C%BA%E5%B9%B3%E6%9D%BF/">萤火虫资源站</a></p>
+<p>现在网上能找到的基本是卡刷包，得使用recovery来刷，只有像小米那样的官方固件包才有一键刷入脚本或者是线刷大包，当然，也有专门提取卡刷包镜像的工具，镜像提取出来之后就能用fastboot来线刷了</p>
+<p>刷机的工具可以直接搜索Androidstudio官方工具包，里面包含两个最常用的工具——adb和fastboot，我们刷机主要就是用这两个</p>
+<p>刷机以lineage os为例，首先想刷类原生的官方包，需要先载下他们官方的recovery，用recovery来刷入</p>
+<h1 id="3-刷入recovery"><a href="#3-刷入recovery" class="headerlink" title="3.刷入recovery"></a>3.刷入recovery</h1><p>recovery的种类有很多，比较知名的第三方rec有橙狐、twrp等等，twrp最新的支持还是安卓9的核，这就意味着刷高版本的安卓之后可能会出现无法解析文件的情况，如下图（安卓15的系统刷9的rec）</p>
+<img title="" src="./images/64c35166f3a85a75420e4b1af5738fe43e96acd5.jpg" alt="P20260119-141922.jpg" width="392">
+
+<p> 现在开始讲讲如何安装第三方rec，其实主要就用到两个指令</p>
+<p>先按开机键加音量上或下（每个品牌有可能有区别）进入fastboot模式</p>
+<img title="" src="./images/c6dbd39fd1611aa3195708c0893fe6e180ec1d4a.jpg" alt="1768804002616.jpg" width="283">
+
+<p>然后使用fastboot工具（加环境变量啥的我就不教了吧）</p>
+<pre><code class="language-bash">fastboot flash recovery rec名字/路径.img
+fastboot reboot recovery #这条是重启到rec的指令，可以直接长按开机加音量上下键（不同牌子不一样）进入rec模式
+</code></pre>
+<h1 id="4-清除手机数据"><a href="#4-清除手机数据" class="headerlink" title="4.清除手机数据"></a>4.清除手机数据</h1><p>这里以twrp为例</p>
+<img title="" src="./images/5f18bdfcc60d8bc85df4a75a7f6c9c4f63ce82eb.jpg" alt="2026-01-19-14-38-09-PixPin_2026-01-19_14-38-07.jpg" width="308">
+
+<img src="./images/2026-01-19-14-39-42-PixPin_2026-01-19_14-39-33.jpg" title="" alt="" width="281">
+
+<img src="./images/2026-01-19-14-41-25-PixPin_2026-01-19_14-41-22.jpg" title="" alt="" width="276">
+
+<p>到这有两个选择，正常来说，想刷第三方系统的话点左边那个</p>
+<img src="./images/2026-01-19-14-43-44-PixPin_2026-01-19_14-43-42.jpg" title="" alt="" width="292">
+
+<p>到这一步，你需要先看看你需要刷的卡刷包里面有没有底包之类的要求</p>
+<p>一般情况下刷安卓版本相近的系统不太需要清system，按照刷机包作者给的要求进行三清（dalvik，cache，data）或四清（加个内部存储），少数有5清要求（system也一块清），这里sys相关的内容优先级是最后的，有很多包如果清了这个会小砖 </p>
+<p>如果是类原生的，清数据一般选择到factory reset，里面会有相关的清除选项，直接按照系统包的要求清就行</p>
+<h1 id="5-传包刷入"><a href="#5-传包刷入" class="headerlink" title="5.传包刷入"></a>5.传包刷入</h1><p>到这基本上简单的适配包都能直接刷入了</p>
+<p>只需要点击安装，然后把电脑或者别的什么设备的刷机包用数据线传到手机上，一般都是zip格式的，再滑动滑块刷入就行了，难度不高，就不放图了</p>
+<p>如果是lineage os或者一些第三方的类原生的话，使用他们官方的rec，一般情况下使用sideload模式刷机</p>
+<img src="./images/2026-01-19-14-59-15-PixPin_2026-01-19_14-59-11.jpg" title="" alt="" width="249">
+
+<p>点击apply update（有时候要在advanced里面enable adb），这会就会进入sideload刷机模式，这时候只需要在电脑上执行以下命令就可以进行刷入</p>
+<pre><code class="language-bash">adb sideload 刷机包名/路径.zip
+</code></pre>
+<p>Q:啥是sideload刷机，什么原理？</p>
+<p>A:普通的“卡刷”需要你先把 ZIP 包拷贝到手机存储卡中，然后让 Recovery 去读取和安装。而 <strong>Sideload</strong> 的原理是建立一条直接的数据通道：</p>
+<p>PC 端 (Sender)：电脑通过 <code>adb</code> 协议充当发送者，读取本地的 ZIP 文件并将其分块发送。</p>
+<p>手机端 (Receiver)：手机进入 Recovery 的 Sideload 模式，充当接收者。它并不把接收到的文件“存”到 SD 卡上（或者只存入临时缓存区），而是直接读取数据流进行解压和安装。</p>
+<p>当手机系统崩溃无法开机，且无法连接电脑传输文件到 SD 卡时（无法挂载 MTP 模式），Sideload 是唯一的“卡刷”救命稻草，因为它不需要进入系统，也不依赖 SD 卡的文件系统是否正常。对于不支持外置 SD 卡且内置存储已满，或者数据分区已加密无法读取的情况，Sideload 可以直接从电脑端读取数据。</p>
+<h1 id="6-后续操作以及救砖"><a href="#6-后续操作以及救砖" class="headerlink" title="6.后续操作以及救砖"></a>6.后续操作以及救砖</h1><p>刷机到这一步，如果能开机的话就算结束了，刷机是很简单的，但是，很多情况下没这么好开机。</p>
+<p>刷不带gapp的类原生很多时候会出现网络连接相关的问题，这时候需要在开机前刷入对应安卓版本的gapp包，把谷歌全家桶安排上之后就可以基本解决网络断联问题。</p>
+<p>救砖相关的内容，我这里分几种常见情况来说：</p>
+<p>1.卡一屏，或者二屏，能进rec：这种情况优先尝试格式化data，先格了看看能不能开机，如果之前刷入的操作都按着包的作者来做的话，格式化完data基本都能开机，如果开不了的话很有可能是包有些问题，比如rec版本不匹配之类的，这时候如果比较着急的话先刷自己手机系统的官方固件，能线刷尽量线刷，如果没线刷包就卡刷，还得注意一下rec版本是否匹配。</p>
+<p>2.卡一屏，进不了rec：这种的话可能会直接跳到fastboot页面，可以先尝试重刷一下rec，看看能不能进，能进的话就给它格式化data再看看开不开得了机。如果这种rec也进不去的话，就通过线刷官方包的方式刷回去能救，比如miflash就能刷，如果线刷包没有脚本的话，就手动把几个重要的img镜像给使用fastboot flash指令刷入，再看看能不能开机。</p>
+<p>3.卡一屏，进不了fastboot，或者干脆不亮：这种就算是比较严重的砖了，正常刷是遇不到这种情况的，如果你的手机支持物理按键强制进入9008工程模式的话，那就按照官方办法把手机接入电脑，查看9008端口是否启用，有启用的话一般使用某贼大佬开发的刷机匣，导入对应引导文件，刷回救砖包或官方线刷包就能救。如果这种没办法的话，一般建议用支持的9008工程线试试，天玑系列芯片的话也有进入工程模式的方法，原理相同，这里不过多赘述。如果工程模式都进不了的话，那只能是通过拆机短接的方式来进工程模式刷了，但是这种情况没专门的工具不建议自己动手，建议是拿钱消灾了。</p>
+<p>Q:什么是9008模式，刷机原理是什么？</p>
+<p>A:9008 模式（官方名称为 Qualcomm HS-USB QD-Loader 9008）是高通（Qualcomm）芯片手机特有的一种<strong>底层刷机模式</strong>，也被称为 <strong>EDL 模式</strong>（Emergency Download Mode，紧急下载模式）。权限极高：它直接跳过了系统的层层校验，允许电脑向手机的闪存（存储芯片）里直接写入底层镜像文件。普通刷机（如 Fastboot 或 Recovery）运行在手机的二级引导程序或系统分区上。而 9008 模式运行在高通芯片（SoC）固化在硬件里的 PBL (Primary Boot Loader，初级引导程序)。硬件固化：PBL 是一段烧死在芯片只读存储器（ROM）里的代码，无法被用户删除或损坏。启动机制：当手机启动时，如果发现闪存里的引导文件损坏，或者检测到特定的硬件触发信号（如短接 Test Point 或特殊的刷机线），CPU 就会自动进入 9008 模式。此时手机就像一台只有 CPU 和 USB 接口在工作的“裸机”，不依赖闪存里的任何系统。</p>
+<p> 第一阶段：Sahara 协议 (握手)</p>
+<p>手机连接电脑后，会识别为 <code>Qualcomm HS-USB QD-Loader 9008</code> 端口。此时，电脑端软件（如 QFIL 或 MiFlash）通过 <strong>Sahara 协议</strong> 将一个被称为 <strong>Programmer（引导加载程序，通常是 .mbn 或 .elf 文件）</strong> 发送到手机的 <strong>RAM（内存）</strong> 中运行。</p>
+<blockquote>
+<p><strong>关键点：</strong> 这个 Programmer 必须经过手机厂商的数字签名验证，否则无法运行。</p>
+</blockquote>
+<p>第二阶段：Firehose 协议 (数据灌输)</p>
+<p>一旦 Programmer 在内存中成功运行，它就会启动 <strong>Firehose 协议</strong>。这是一个基于 XML 指令的通信方式。</p>
+<p>电脑发送 XML 指令告诉手机：“请把这个 4GB 的系统镜像写进 UFS&#x2F;eMMC 闪存的第 X 扇区”。</p>
+<p>Programmer 接收指令，直接绕过 Android 系统，将镜像文件精准地“填”进手机的存储分区。</p>
+<p>为什么它能“救砖”？</p>
+<p>普通刷机就像是给正在运行的房屋（系统）换门窗，如果地基（引导分区）坏了，你就进不去了。<br>而 9008 刷机相当于施工队直接空降到地基现场：</p>
+<ol>
+<li><p>完全跳过闪存限制：即使闪存被格式化、分区表丢失，只要 CPU 没坏，就能重写分区。</p>
+</li>
+<li><p>不依赖 Bootloader 锁：在许多老旧机型上，9008 模式可以绕过 Bootloader 解锁权限（虽然近年来厂商加强了服务器验证）。</p>
+</li>
+<li><p>直接读写物理扇区：它可以对存储芯片进行最底层的擦除和写入。</p>
+</li>
+</ol>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/label/%E5%88%B7%E6%9C%BA/" rel="tag"># 刷机</a>
+              <a href="/label/root/" rel="tag"># root</a>
+              <a href="/label/%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA/" rel="tag"># 环境搭建</a>
+              <a href="/label/%E7%BB%8F%E9%AA%8C%E6%80%BB%E7%BB%93/" rel="tag"># 经验总结</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2025/12/22/illusion/" rel="prev" title="illusion">
+      <i class="fa fa-chevron-left"></i> illusion
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2077/07/28/%E5%8D%9A%E5%AE%A2%E7%AE%80%E4%BB%8B/" rel="next" title="欢迎来到我的博客">
+      欢迎来到我的博客 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#0-%E5%88%B7%E6%9C%BA%E5%89%8D%E7%9A%84%E5%BF%85%E8%A6%81%E5%87%86%E5%A4%87%E2%80%94%E2%80%94%E8%A7%A3%E9%94%81bootloader"><span class="nav-number">1.</span> <span class="nav-text">0.刷机前的必要准备——解锁bootloader</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#1-%E8%A7%A3%E9%94%81%E5%90%8E%E7%9A%84%E7%AC%AC%E4%B8%80%E6%AD%A5%E2%80%94%E2%80%94%E6%98%8E%E7%A1%AE%E5%8D%A1%E5%88%B7%E5%92%8C%E7%BA%BF%E5%88%B7%E7%9A%84%E6%A6%82%E5%BF%B5"><span class="nav-number">2.</span> <span class="nav-text">1.解锁后的第一步——明确卡刷和线刷的概念</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#2-%E6%89%BE%E5%8C%85%E5%92%8C%E8%BD%BD%E5%B7%A5%E5%85%B7"><span class="nav-number">3.</span> <span class="nav-text">2.找包和载工具</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#3-%E5%88%B7%E5%85%A5recovery"><span class="nav-number">4.</span> <span class="nav-text">3.刷入recovery</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#4-%E6%B8%85%E9%99%A4%E6%89%8B%E6%9C%BA%E6%95%B0%E6%8D%AE"><span class="nav-number">5.</span> <span class="nav-text">4.清除手机数据</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#5-%E4%BC%A0%E5%8C%85%E5%88%B7%E5%85%A5"><span class="nav-number">6.</span> <span class="nav-text">5.传包刷入</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#6-%E5%90%8E%E7%BB%AD%E6%93%8D%E4%BD%9C%E4%BB%A5%E5%8F%8A%E6%95%91%E7%A0%96"><span class="nav-number">7.</span> <span class="nav-text">6.后续操作以及救砖</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="ALFFL"
+      src="/images/avatar.gif">
+  <p class="site-author-name" itemprop="name">ALFFL</p>
+  <div class="site-description" itemprop="description">追求源于热爱</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">15</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">14</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 2025-12 – 
+  <span itemprop="copyrightYear">2026</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ALFFL</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
