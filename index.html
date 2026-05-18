@@ -220,9 +220,96 @@
 </li>
 </ul>
 <h3 id="🌱-我的信念"><a href="#🌱-我的信念" class="headerlink" title="🌱 我的信念"></a>🌱 我的信念</h3><p>多少事，从来急，天地转，光阴迫，一万年太久，只争朝夕。</p>
-<h3 id="📮-保持连接"><a href="#📮-保持连接" class="headerlink" title="📮 保持连接"></a>📮 保持连接</h3><p>如果你对某个话题有共鸣，或者有想法想与我交流，非常欢迎通过Google邮箱<a href="mailto:&#102;&#114;&#105;&#101;&#114;&#x65;&#110;&#x2e;&#97;&#108;&#102;&#97;&#64;&#103;&#109;&#97;&#105;&#108;&#x2e;&#x63;&#111;&#109;">frieren.alfa@gmail.com</a>找到我。</p>
+<h3 id="📮-保持连接"><a href="#📮-保持连接" class="headerlink" title="📮 保持连接"></a>📮 保持连接</h3><p>如果你对某个话题有共鸣，或者有想法想与我交流，非常欢迎通过Google邮箱<a href="mailto:&#102;&#114;&#105;&#101;&#114;&#x65;&#110;&#46;&#x61;&#x6c;&#x66;&#x61;&#64;&#103;&#109;&#97;&#105;&#108;&#x2e;&#99;&#111;&#109;">frieren.alfa@gmail.com</a>找到我。</p>
 <p>感谢你的停留，期待我们能在思想的某个路口相遇。</p>
 <p>ALFFL</p>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://alffl1st.github.io/2026/05/18/OpenCode%E7%9A%84%E9%85%8D%E7%BD%AE%E5%92%8C%E4%BD%BF%E7%94%A8/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="ALFFL">
+      <meta itemprop="description" content="追求源于热爱">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="ALFFL1st">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2026/05/18/OpenCode%E7%9A%84%E9%85%8D%E7%BD%AE%E5%92%8C%E4%BD%BF%E7%94%A8/" class="post-title-link" itemprop="url">OpenCode的配置和使用</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2026-05-18 21:24:26 / 修改时间：22:07:43" itemprop="dateCreated datePublished" datetime="2026-05-18T21:24:26+08:00">2026-05-18</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <p> 在deep seek v4模型发布后，api价格迎来了一波史诗级大降啊，现在单说在编程领域的话，比openclaw更便宜，更安全的选择就是各式各样的agent工具了（Claude code泄露之后像雨后春笋一样冒出来的一大堆）。agent工具安全就安全在你可以完全给它限制一个可访问的文件夹范围，权限可控程度极高，做东西的效率提升极大。本篇博客主要以Android studio和opencode相结合介绍安装和使用过程。</p>
+<h1 id="0-资源准备"><a href="#0-资源准备" class="headerlink" title="0.资源准备"></a>0.资源准备</h1><p>本篇以Android studio作例子，使用的是最新版，下载链接：<a target="_blank" rel="noopener" href="https://developer.android.com/studio/install?hl=zh-cn">https://developer.android.com/studio/install?hl=zh-cn</a></p>
+<p><img src="/./images/2026-05-18-21-42-15-PixPin_2026-05-18_21-42-12.jpg"></p>
+<p>直接就可以下载安装，安装程序内存约1.3g，安装后内存约为2g以上，所以请注意安装位置的预留内存。</p>
+<p>opencode官网：<a target="_blank" rel="noopener" href="https://opencode.ai/">https://opencode.ai/</a></p>
+<p>直接在官网根据自己的系统下载安装就行</p>
+<h1 id="1-购买api并在opencode内部署"><a href="#1-购买api并在opencode内部署" class="headerlink" title="1.购买api并在opencode内部署"></a>1.购买api并在opencode内部署</h1><p>打开deepseek官网：deepseek.com</p>
+<p><img src="/./images/2026-05-18-21-48-27-PixPin_2026-05-18_21-48-03.jpg"></p>
+<p>点击api开放平台，注册登录后进入主页</p>
+<p><img src="/./images/2026-05-18-21-48-58-PixPin_2026-05-18_21-48-54.jpg"></p>
+<p>点击左侧列表充值，认证完后充入余额</p>
+<p>在点击api keys</p>
+<p><img src="/./images/2026-05-18-21-50-57-PixPin_2026-05-18_21-50-50.jpg"></p>
+<p>点击创建api</p>
+<p><img src="/./images/2026-05-18-21-51-23-PixPin_2026-05-18_21-51-20.jpg"></p>
+<p><img src="/./images/2026-05-18-21-51-43-PixPin_2026-05-18_21-51-39.jpg"></p>
+<p>这时候会展示api key，这个只会展示一次，没复制就要重新创建，复制下打开opencode</p>
+<p><img src="/./images/2026-05-18-21-53-01-PixPin_2026-05-18_21-52-56.jpg"></p>
+<p>左下角打开设置，选择供应商，拉到底下有个更多供应商，搜索deepseek之后创建链接，把复制的api贴进去</p>
+<p><img src="/./images/2026-05-18-21-53-22-PixPin_2026-05-18_21-53-18.jpg"></p>
+<p>把模型打开，就可以愉快的调用了</p>
+<p><img src="/./images/2026-05-18-21-54-52-PixPin_2026-05-18_21-54-38.jpg"></p>
+<h1 id="2-创建一个项目框架（Android-Studio为例）"><a href="#2-创建一个项目框架（Android-Studio为例）" class="headerlink" title="2.创建一个项目框架（Android Studio为例）"></a>2.创建一个项目框架（Android Studio为例）</h1><p>使用as创建一个新的项目，这时候记下项目文件夹的路径<img src="/./images/2026-05-18-21-58-58-PixPin_2026-05-18_21-58-14.jpg"></p>
+<p>用opencode打开这个文件夹<img src="/./images/2026-05-18-22-00-10-PixPin_2026-05-18_21-59-42.jpg"></p>
+<p>这时候ai就可以直接读入你的项目文件了，非常快捷</p>
+<p><img src="/./images/2026-05-18-22-01-56-PixPin_2026-05-18_22-01-54.jpg"></p>
+<p>然后可以使用ai生成你想要的提示词，让它一键做完项目文件</p>
+<p><img src="/./images/2026-05-18-22-01-43-PixPin_2026-05-18_22-01-35.jpg"></p>
+<h1 id="3-提示词注意事项"><a href="#3-提示词注意事项" class="headerlink" title="3.提示词注意事项"></a>3.提示词注意事项</h1><p>ai方便是方便，但是得说能让ai听得懂的话，如果是完整的项目的话往往需要你对每个功能的细节都描述完备，包括但不限于按钮的位置，图标的大小，预留接口的功能等等。在编写提示词的时候描述尽可能确定的语言，避免大概，可能，大约等词汇，可以减少ai无效抽奖消耗token的情况。会用ai但是自己需要先对整个项目的框架有足够的了解才行，ai只是辅助提升效率，人依然重要。</p>
 
       
     </div>
@@ -827,65 +914,6 @@ fastboot reboot recovery #这条是重启到rec的指令，可以直接长按开
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="http://alffl1st.github.io/2025/12/22/%E5%88%AE%E5%BC%80%E6%9C%89%E5%A5%96/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="ALFFL">
-      <meta itemprop="description" content="追求源于热爱">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="ALFFL1st">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2025/12/22/%E5%88%AE%E5%BC%80%E6%9C%89%E5%A5%96/" class="post-title-link" itemprop="url">刮开有奖</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-              
-
-              <time title="创建时间：2025-12-22 15:00:25 / 修改时间：15:01:51" itemprop="dateCreated datePublished" datetime="2025-12-22T15:00:25+08:00">2025-12-22</time>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p><img src="/./images/2025-12-22-15-01-21-PixPin_2025-12-22_15-01-19.jpg"></p>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
 
   
   <nav class="pagination">
@@ -957,7 +985,7 @@ fastboot reboot recovery #这条是重启到rec的指令，可以直接长按开
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">15</span>
+          <span class="site-state-item-count">16</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>

@@ -20,29 +20,36 @@
     var CONFIG = {"hostname":"alffl1st.github.io","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
   </script>
 
-  <meta name="description" content="GitHub教育福利申请完可以免费使用copilot中的各种模型，涵盖cloude，gpt和Gemini的主流付费模型，所以申请成功之后还是很超值的 跟随步骤一步一步做能申请下来 1.设置支付信息  信息差不多这么设置，得全部使用英文，中文名字的话第一格写姓第二格写名实测可以 地址如实填写，然后也全部使用英文，可以去谷歌地图上看英文版的街道名，或是百度地图之类的找到街道名再用翻译软件翻译 但是这边">
+  <meta name="description" content="在deep seek v4模型发布后，api价格迎来了一波史诗级大降啊，现在单说在编程领域的话，比openclaw更便宜，更安全的选择就是各式各样的agent工具了（Claude code泄露之后像雨后春笋一样冒出来的一大堆）。agent工具安全就安全在你可以完全给它限制一个可访问的文件夹范围，权限可控程度极高，做东西的效率提升极大。本篇博客主要以Android studio和opencode相">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Github教育福利申请">
-<meta property="og:url" content="http://alffl1st.github.io/2025/12/22/Github%E6%95%99%E8%82%B2%E7%A6%8F%E5%88%A9%E7%94%B3%E8%AF%B7/index.html">
+<meta property="og:title" content="OpenCode的配置和使用">
+<meta property="og:url" content="http://alffl1st.github.io/2026/05/18/OpenCode%E7%9A%84%E9%85%8D%E7%BD%AE%E5%92%8C%E4%BD%BF%E7%94%A8/index.html">
 <meta property="og:site_name" content="ALFFL1st">
-<meta property="og:description" content="GitHub教育福利申请完可以免费使用copilot中的各种模型，涵盖cloude，gpt和Gemini的主流付费模型，所以申请成功之后还是很超值的 跟随步骤一步一步做能申请下来 1.设置支付信息  信息差不多这么设置，得全部使用英文，中文名字的话第一格写姓第二格写名实测可以 地址如实填写，然后也全部使用英文，可以去谷歌地图上看英文版的街道名，或是百度地图之类的找到街道名再用翻译软件翻译 但是这边">
+<meta property="og:description" content="在deep seek v4模型发布后，api价格迎来了一波史诗级大降啊，现在单说在编程领域的话，比openclaw更便宜，更安全的选择就是各式各样的agent工具了（Claude code泄露之后像雨后春笋一样冒出来的一大堆）。agent工具安全就安全在你可以完全给它限制一个可访问的文件夹范围，权限可控程度极高，做东西的效率提升极大。本篇博客主要以Android studio和opencode相">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="http://alffl1st.github.io/images/2025-12-22-14-31-24-PixPin_2025-12-22_14-31-22.jpg">
-<meta property="og:image" content="http://alffl1st.github.io/images/2025-12-22-14-32-10-PixPin_2025-12-22_14-32-07.jpg">
-<meta property="og:image" content="http://alffl1st.github.io/images/2025-12-22-14-51-36-PixPin_2025-12-22_14-51-32.jpg">
-<meta property="og:image" content="http://alffl1st.github.io/images/2025-12-22-14-38-38-PixPin_2025-12-22_14-38-36.jpg">
-<meta property="og:image" content="http://alffl1st.github.io/images/2025-12-22-14-40-14-PixPin_2025-12-22_14-40-12.jpg">
-<meta property="og:image" content="http://alffl1st.github.io/images/2025-12-22-14-43-20-PixPin_2025-12-22_14-43-00.jpg">
-<meta property="og:image" content="http://alffl1st.github.io/images/2025-12-22-14-45-33-PixPin_2025-12-22_14-45-28.jpg">
-<meta property="og:image" content="http://alffl1st.github.io/images/2025-12-22-14-46-16-PixPin_2025-12-22_14-46-13.jpg">
-<meta property="article:published_time" content="2025-12-22T06:25:52.000Z">
-<meta property="article:modified_time" content="2025-12-22T06:51:43.554Z">
+<meta property="og:image" content="http://alffl1st.github.io/images/2026-05-18-21-42-15-PixPin_2026-05-18_21-42-12.jpg">
+<meta property="og:image" content="http://alffl1st.github.io/images/2026-05-18-21-48-27-PixPin_2026-05-18_21-48-03.jpg">
+<meta property="og:image" content="http://alffl1st.github.io/images/2026-05-18-21-48-58-PixPin_2026-05-18_21-48-54.jpg">
+<meta property="og:image" content="http://alffl1st.github.io/images/2026-05-18-21-50-57-PixPin_2026-05-18_21-50-50.jpg">
+<meta property="og:image" content="http://alffl1st.github.io/images/2026-05-18-21-51-23-PixPin_2026-05-18_21-51-20.jpg">
+<meta property="og:image" content="http://alffl1st.github.io/images/2026-05-18-21-51-43-PixPin_2026-05-18_21-51-39.jpg">
+<meta property="og:image" content="http://alffl1st.github.io/images/2026-05-18-21-53-01-PixPin_2026-05-18_21-52-56.jpg">
+<meta property="og:image" content="http://alffl1st.github.io/images/2026-05-18-21-53-22-PixPin_2026-05-18_21-53-18.jpg">
+<meta property="og:image" content="http://alffl1st.github.io/images/2026-05-18-21-54-52-PixPin_2026-05-18_21-54-38.jpg">
+<meta property="og:image" content="http://alffl1st.github.io/images/2026-05-18-21-58-58-PixPin_2026-05-18_21-58-14.jpg">
+<meta property="og:image" content="http://alffl1st.github.io/images/2026-05-18-22-00-10-PixPin_2026-05-18_21-59-42.jpg">
+<meta property="og:image" content="http://alffl1st.github.io/images/2026-05-18-22-01-56-PixPin_2026-05-18_22-01-54.jpg">
+<meta property="og:image" content="http://alffl1st.github.io/images/2026-05-18-22-01-43-PixPin_2026-05-18_22-01-35.jpg">
+<meta property="article:published_time" content="2026-05-18T13:24:26.000Z">
+<meta property="article:modified_time" content="2026-05-18T14:07:43.134Z">
 <meta property="article:author" content="ALFFL">
 <meta property="article:tag" content="工具攻略">
+<meta property="article:tag" content="环境搭建">
+<meta property="article:tag" content="经验总结">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="http://alffl1st.github.io/images/2025-12-22-14-31-24-PixPin_2025-12-22_14-31-22.jpg">
+<meta name="twitter:image" content="http://alffl1st.github.io/images/2026-05-18-21-42-15-PixPin_2026-05-18_21-42-12.jpg">
 
-<link rel="canonical" href="http://alffl1st.github.io/2025/12/22/Github%E6%95%99%E8%82%B2%E7%A6%8F%E5%88%A9%E7%94%B3%E8%AF%B7/">
+<link rel="canonical" href="http://alffl1st.github.io/2026/05/18/OpenCode%E7%9A%84%E9%85%8D%E7%BD%AE%E5%92%8C%E4%BD%BF%E7%94%A8/">
 
 
 <script id="page-configurations">
@@ -55,7 +62,7 @@
   };
 </script>
 
-  <title>Github教育福利申请 | ALFFL1st</title>
+  <title>OpenCode的配置和使用 | ALFFL1st</title>
   
 
 
@@ -175,7 +182,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="http://alffl1st.github.io/2025/12/22/Github%E6%95%99%E8%82%B2%E7%A6%8F%E5%88%A9%E7%94%B3%E8%AF%B7/">
+    <link itemprop="mainEntityOfPage" href="http://alffl1st.github.io/2026/05/18/OpenCode%E7%9A%84%E9%85%8D%E7%BD%AE%E5%92%8C%E4%BD%BF%E7%94%A8/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -188,7 +195,7 @@
     </span>
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
-          Github教育福利申请
+          OpenCode的配置和使用
         </h1>
 
         <div class="post-meta">
@@ -199,7 +206,7 @@
               <span class="post-meta-item-text">发表于</span>
               
 
-              <time title="创建时间：2025-12-22 14:25:52 / 修改时间：14:51:43" itemprop="dateCreated datePublished" datetime="2025-12-22T14:25:52+08:00">2025-12-22</time>
+              <time title="创建时间：2026-05-18 21:24:26 / 修改时间：22:07:43" itemprop="dateCreated datePublished" datetime="2026-05-18T21:24:26+08:00">2026-05-18</time>
             </span>
 
           
@@ -213,30 +220,35 @@
     <div class="post-body" itemprop="articleBody">
 
       
-        <p>GitHub教育福利申请完可以免费使用copilot中的各种模型，涵盖cloude，gpt和Gemini的主流付费模型，所以申请成功之后还是很超值的</p>
-<p>跟随步骤一步一步做能申请下来</p>
-<h1 id="1-设置支付信息"><a href="#1-设置支付信息" class="headerlink" title="1.设置支付信息"></a>1.设置支付信息</h1><p><img src="/./images/2025-12-22-14-31-24-PixPin_2025-12-22_14-31-22.jpg"></p>
-<p><img src="/./images/2025-12-22-14-32-10-PixPin_2025-12-22_14-32-07.jpg"></p>
-<p>信息差不多这么设置，得全部使用英文，中文名字的话第一格写姓第二格写名实测可以</p>
-<p>地址如实填写，然后也全部使用英文，可以去谷歌地图上看英文版的街道名，或是百度地图之类的找到街道名再用翻译软件翻译</p>
-<p>但是这边的所有信息都需要与接下来在申请页面填写的信息完全一致</p>
-<p><img src="/./images/2025-12-22-14-51-36-PixPin_2025-12-22_14-51-32.jpg"></p>
-<p>还是在设置页面选到教育福利那一栏，开始申请，这里邮箱写学校给的edu邮箱，共享位置需要把梯子先下了，能省很多麻烦</p>
-<p>学校名也写英文</p>
-<p><img src="/./images/2025-12-22-14-38-38-PixPin_2025-12-22_14-38-36.jpg"></p>
-<p>到这个界面会调用摄像头，手持手机的一个信息表格截图就能过</p>
-<p><img src="/./images/2025-12-22-14-40-14-PixPin_2025-12-22_14-40-12.jpg"></p>
-<p>就是建一个这样的表格，把基础信息用英文填完，最下层的time需要跟申请当天的信息一致，其他信息与支付信息保持一致，手持可以不露脸</p>
-<p>记得最好不要挂梯子，不过挂梯子的验证方式也有，会麻烦一些</p>
-<p>如果挂了梯子会出现下面这种情况</p>
-<p><img src="/./images/2025-12-22-14-43-20-PixPin_2025-12-22_14-43-00.jpg"></p>
-<p>这里直接选使用VPN，实测原因如实写英文的“我的位置需要使用VPN才能正常访问GitHub，我可以提供现在拍摄的校园照片”</p>
-<p>然后启动相机，拍一张校内的照片提交就行</p>
-<p><img src="/./images/2025-12-22-14-45-33-PixPin_2025-12-22_14-45-28.jpg"></p>
-<p>最后出现这个页面就是过了的</p>
-<p>如果需要双重验证，安装以下插件就行</p>
-<p><img src="/./images/2025-12-22-14-46-16-PixPin_2025-12-22_14-46-13.jpg"></p>
-<p>在需要码的时候这个插件能自动获取，直接把获取到的填上就行</p>
+        <p> 在deep seek v4模型发布后，api价格迎来了一波史诗级大降啊，现在单说在编程领域的话，比openclaw更便宜，更安全的选择就是各式各样的agent工具了（Claude code泄露之后像雨后春笋一样冒出来的一大堆）。agent工具安全就安全在你可以完全给它限制一个可访问的文件夹范围，权限可控程度极高，做东西的效率提升极大。本篇博客主要以Android studio和opencode相结合介绍安装和使用过程。</p>
+<h1 id="0-资源准备"><a href="#0-资源准备" class="headerlink" title="0.资源准备"></a>0.资源准备</h1><p>本篇以Android studio作例子，使用的是最新版，下载链接：<a target="_blank" rel="noopener" href="https://developer.android.com/studio/install?hl=zh-cn">https://developer.android.com/studio/install?hl=zh-cn</a></p>
+<p><img src="/./images/2026-05-18-21-42-15-PixPin_2026-05-18_21-42-12.jpg"></p>
+<p>直接就可以下载安装，安装程序内存约1.3g，安装后内存约为2g以上，所以请注意安装位置的预留内存。</p>
+<p>opencode官网：<a target="_blank" rel="noopener" href="https://opencode.ai/">https://opencode.ai/</a></p>
+<p>直接在官网根据自己的系统下载安装就行</p>
+<h1 id="1-购买api并在opencode内部署"><a href="#1-购买api并在opencode内部署" class="headerlink" title="1.购买api并在opencode内部署"></a>1.购买api并在opencode内部署</h1><p>打开deepseek官网：deepseek.com</p>
+<p><img src="/./images/2026-05-18-21-48-27-PixPin_2026-05-18_21-48-03.jpg"></p>
+<p>点击api开放平台，注册登录后进入主页</p>
+<p><img src="/./images/2026-05-18-21-48-58-PixPin_2026-05-18_21-48-54.jpg"></p>
+<p>点击左侧列表充值，认证完后充入余额</p>
+<p>在点击api keys</p>
+<p><img src="/./images/2026-05-18-21-50-57-PixPin_2026-05-18_21-50-50.jpg"></p>
+<p>点击创建api</p>
+<p><img src="/./images/2026-05-18-21-51-23-PixPin_2026-05-18_21-51-20.jpg"></p>
+<p><img src="/./images/2026-05-18-21-51-43-PixPin_2026-05-18_21-51-39.jpg"></p>
+<p>这时候会展示api key，这个只会展示一次，没复制就要重新创建，复制下打开opencode</p>
+<p><img src="/./images/2026-05-18-21-53-01-PixPin_2026-05-18_21-52-56.jpg"></p>
+<p>左下角打开设置，选择供应商，拉到底下有个更多供应商，搜索deepseek之后创建链接，把复制的api贴进去</p>
+<p><img src="/./images/2026-05-18-21-53-22-PixPin_2026-05-18_21-53-18.jpg"></p>
+<p>把模型打开，就可以愉快的调用了</p>
+<p><img src="/./images/2026-05-18-21-54-52-PixPin_2026-05-18_21-54-38.jpg"></p>
+<h1 id="2-创建一个项目框架（Android-Studio为例）"><a href="#2-创建一个项目框架（Android-Studio为例）" class="headerlink" title="2.创建一个项目框架（Android Studio为例）"></a>2.创建一个项目框架（Android Studio为例）</h1><p>使用as创建一个新的项目，这时候记下项目文件夹的路径<img src="/./images/2026-05-18-21-58-58-PixPin_2026-05-18_21-58-14.jpg"></p>
+<p>用opencode打开这个文件夹<img src="/./images/2026-05-18-22-00-10-PixPin_2026-05-18_21-59-42.jpg"></p>
+<p>这时候ai就可以直接读入你的项目文件了，非常快捷</p>
+<p><img src="/./images/2026-05-18-22-01-56-PixPin_2026-05-18_22-01-54.jpg"></p>
+<p>然后可以使用ai生成你想要的提示词，让它一键做完项目文件</p>
+<p><img src="/./images/2026-05-18-22-01-43-PixPin_2026-05-18_22-01-35.jpg"></p>
+<h1 id="3-提示词注意事项"><a href="#3-提示词注意事项" class="headerlink" title="3.提示词注意事项"></a>3.提示词注意事项</h1><p>ai方便是方便，但是得说能让ai听得懂的话，如果是完整的项目的话往往需要你对每个功能的细节都描述完备，包括但不限于按钮的位置，图标的大小，预留接口的功能等等。在编写提示词的时候描述尽可能确定的语言，避免大概，可能，大约等词汇，可以减少ai无效抽奖消耗token的情况。会用ai但是自己需要先对整个项目的框架有足够的了解才行，ai只是辅助提升效率，人依然重要。</p>
 
     </div>
 
@@ -247,6 +259,8 @@
       <footer class="post-footer">
           <div class="post-tags">
               <a href="/label/%E5%B7%A5%E5%85%B7%E6%94%BB%E7%95%A5/" rel="tag"># 工具攻略</a>
+              <a href="/label/%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA/" rel="tag"># 环境搭建</a>
+              <a href="/label/%E7%BB%8F%E9%AA%8C%E6%80%BB%E7%BB%93/" rel="tag"># 经验总结</a>
           </div>
 
         
@@ -255,12 +269,12 @@
         
     <div class="post-nav">
       <div class="post-nav-item">
-    <a href="/2025/12/17/%E6%BB%B4%E6%B0%B4%E9%80%86%E5%90%91/" rel="prev" title="滴水逆向">
-      <i class="fa fa-chevron-left"></i> 滴水逆向
+    <a href="/2026/01/13/%E5%88%B7%E6%9C%BA%E4%BB%A5%E5%8F%8Aroot%E8%87%AA%E7%94%A8%E6%95%99%E7%A8%8B/" rel="prev" title="刷机以及root自用教程">
+      <i class="fa fa-chevron-left"></i> 刷机以及root自用教程
     </a></div>
       <div class="post-nav-item">
-    <a href="/2025/12/22/luck-guy/" rel="next" title="luck_guy">
-      luck_guy <i class="fa fa-chevron-right"></i>
+    <a href="/2077/07/28/%E5%8D%9A%E5%AE%A2%E7%AE%80%E4%BB%8B/" rel="next" title="欢迎来到我的博客">
+      欢迎来到我的博客 <i class="fa fa-chevron-right"></i>
     </a></div>
     </div>
       </footer>
@@ -320,7 +334,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#1-%E8%AE%BE%E7%BD%AE%E6%94%AF%E4%BB%98%E4%BF%A1%E6%81%AF"><span class="nav-number">1.</span> <span class="nav-text">1.设置支付信息</span></a></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#0-%E8%B5%84%E6%BA%90%E5%87%86%E5%A4%87"><span class="nav-number">1.</span> <span class="nav-text">0.资源准备</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#1-%E8%B4%AD%E4%B9%B0api%E5%B9%B6%E5%9C%A8opencode%E5%86%85%E9%83%A8%E7%BD%B2"><span class="nav-number">2.</span> <span class="nav-text">1.购买api并在opencode内部署</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#2-%E5%88%9B%E5%BB%BA%E4%B8%80%E4%B8%AA%E9%A1%B9%E7%9B%AE%E6%A1%86%E6%9E%B6%EF%BC%88Android-Studio%E4%B8%BA%E4%BE%8B%EF%BC%89"><span class="nav-number">3.</span> <span class="nav-text">2.创建一个项目框架（Android Studio为例）</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#3-%E6%8F%90%E7%A4%BA%E8%AF%8D%E6%B3%A8%E6%84%8F%E4%BA%8B%E9%A1%B9"><span class="nav-number">4.</span> <span class="nav-text">3.提示词注意事项</span></a></li></ol></div>
       </div>
       <!--/noindex-->
 
