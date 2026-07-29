@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 8.1.1">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"alffl1st.github.io","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="Xperia XZ1 (poplar) LineageOS 18.1 &#x2F; KernelSU-Next 构建与排障记录 1. 目标在 Sony Xperia XZ1 poplar（G8341&#x2F;SOV36）上完成以下工作：  构建可启动的 Linux 4.4.302 基线内核。 使用当前 PixelExperience Android 11 的 ramdisk 验证自编译内核。 集">
+<meta property="og:type" content="article">
+<meta property="og:title" content="自编译老内核kernelsu经验总结">
+<meta property="og:url" content="http://alffl1st.github.io/2026/07/29/%E8%87%AA%E7%BC%96%E8%AF%91%E8%80%81%E5%86%85%E6%A0%B8kernelsu%E7%BB%8F%E9%AA%8C%E6%80%BB%E7%BB%93/index.html">
+<meta property="og:site_name" content="ALFFL1st">
+<meta property="og:description" content="Xperia XZ1 (poplar) LineageOS 18.1 &#x2F; KernelSU-Next 构建与排障记录 1. 目标在 Sony Xperia XZ1 poplar（G8341&#x2F;SOV36）上完成以下工作：  构建可启动的 Linux 4.4.302 基线内核。 使用当前 PixelExperience Android 11 的 ramdisk 验证自编译内核。 集">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-07-29T04:58:35.000Z">
+<meta property="article:modified_time" content="2026-07-29T05:00:35.540Z">
+<meta property="article:author" content="ALFFL">
+<meta property="article:tag" content="root">
+<meta property="article:tag" content="刷机">
+<meta property="article:tag" content="环境搭建">
+<meta property="article:tag" content="经验总结">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://alffl1st.github.io/2026/07/29/%E8%87%AA%E7%BC%96%E8%AF%91%E8%80%81%E5%86%85%E6%A0%B8kernelsu%E7%BB%8F%E9%AA%8C%E6%80%BB%E7%BB%93/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>自编译老内核kernelsu经验总结 | ALFFL1st</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">ALFFL1st</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://alffl1st.github.io/2026/07/29/%E8%87%AA%E7%BC%96%E8%AF%91%E8%80%81%E5%86%85%E6%A0%B8kernelsu%E7%BB%8F%E9%AA%8C%E6%80%BB%E7%BB%93/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="ALFFL">
+      <meta itemprop="description" content="追求源于热爱">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="ALFFL1st">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          自编译老内核kernelsu经验总结
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2026-07-29 12:58:35 / 修改时间：13:00:35" itemprop="dateCreated datePublished" datetime="2026-07-29T12:58:35+08:00">2026-07-29</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>Xperia XZ1 (poplar) LineageOS 18.1 &#x2F; KernelSU-Next 构建与排障记录</p>
+<h2 id="1-目标"><a href="#1-目标" class="headerlink" title="1. 目标"></a>1. 目标</h2><p>在 Sony Xperia XZ1 <code>poplar</code>（G8341&#x2F;SOV36）上完成以下工作：</p>
+<ol>
+<li>构建可启动的 Linux 4.4.302 基线内核。</li>
+<li>使用当前 PixelExperience Android 11 的 ramdisk 验证自编译内核。</li>
+<li>集成适用于 Linux 4.4 的 KernelSU-Next。</li>
+<li>最终让 KernelSU Manager 能识别内核并实际授予 root 权限。</li>
+</ol>
+<p>目前已经完成内核基线验证、KernelSU-Next 编译和临时启动验证。KernelSU 功能层面的 root 授权仍待最终验证。</p>
+<hr>
+<h2 id="2-环境信息"><a href="#2-环境信息" class="headerlink" title="2. 环境信息"></a>2. 环境信息</h2><h3 id="2-1-构建主机"><a href="#2-1-构建主机" class="headerlink" title="2.1 构建主机"></a>2.1 构建主机</h3><ul>
+<li>系统：Ubuntu 24.04.4 LTS</li>
+<li>内核：Linux 6.8.0-136-generic x86_64</li>
+<li>内存：15.6 GB RAM</li>
+<li>Swap：2 GB</li>
+<li>Android 源码：<code>~/android/lineage-18.1</code></li>
+<li>构建目标：<code>lineage_poplar-userdebug</code></li>
+<li>Android 平台：Android 11 &#x2F; LineageOS 18.1</li>
+<li>构建并发：<code>-j2</code></li>
+</ul>
+<p>构建系统会提示内存低于建议的 16 GB。当前使用 <code>-j2</code> 可以降低 Soong、Ninja 和内核并行编译造成的内存压力。</p>
+<h3 id="2-2-设备"><a href="#2-2-设备" class="headerlink" title="2.2 设备"></a>2.2 设备</h3><ul>
+<li>设备：Sony Xperia XZ1</li>
+<li>设备代号：<code>poplar</code></li>
+<li>型号属性：G8341 &#x2F; SOV36</li>
+<li>bootloader：已解锁</li>
+<li>当前 ROM：PixelExperience Plus Android 11</li>
+<li>Android SDK：30</li>
+<li>fastboot 序列号：<code>QV702UFT11</code></li>
+<li>fastboot 支持临时启动：<code>fastboot boot</code></li>
+</ul>
+<p>当前正常启动的是原 PixelExperience boot，Magisk root 可用：</p>
+<pre><code class="language-text">uid=0(root) gid=0(root) groups=0(root) context=u:r:magisk:s0
+</code></pre>
+<hr>
+<h2 id="3-源码准备"><a href="#3-源码准备" class="headerlink" title="3. 源码准备"></a>3. 源码准备</h2><h3 id="3-1-Android-源码"><a href="#3-1-Android-源码" class="headerlink" title="3.1 Android 源码"></a>3.1 Android 源码</h3><p>LineageOS 18.1 主源码已经同步完成，设备相关目录包括：</p>
+<pre><code class="language-text">device/sony/poplar
+device/sony/yoshino-common
+kernel/sony/msm8998
+vendor/sony/poplar
+</code></pre>
+<p>设备树采用 <code>whatawurst</code> 的 LineageOS 18.1 实现。</p>
+<h3 id="3-2-内核源码"><a href="#3-2-内核源码" class="headerlink" title="3.2 内核源码"></a>3.2 内核源码</h3><p>内核源码目录：</p>
+<pre><code class="language-text">~/android/lineage-18.1/kernel/sony/msm8998
+</code></pre>
+<p>内核来源 commit：</p>
+<pre><code class="language-text">85139e3d7b8dce1fd285c68f09469cc3e9af3902
+</code></pre>
+<p>版本：</p>
+<pre><code class="language-text">Linux 4.4.302
+</code></pre>
+<p>使用的 defconfig：</p>
+<pre><code class="language-text">arch/arm64/configs/lineage-msm8998-yoshino-poplar_defconfig
+</code></pre>
+<p>由于 Git pack 下载经常发生网络中断，内核最终通过指定 commit 的源码压缩包获取，然后在本地初始化 Git 仓库。</p>
+<h3 id="3-3-Proprietary-vendor"><a href="#3-3-Proprietary-vendor" class="headerlink" title="3.3 Proprietary vendor"></a>3.3 Proprietary vendor</h3><p>TheMuppets 对应分支中没有可直接使用的 <code>poplar</code> vendor，因此使用 root ADB 从当前 PixelExperience 系统提取 proprietary 文件，并生成：</p>
+<pre><code class="language-text">vendor/sony/poplar/poplar-vendor.mk
+</code></pre>
+<hr>
+<h2 id="4-CTS-稀疏检出问题"><a href="#4-CTS-稀疏检出问题" class="headerlink" title="4. CTS 稀疏检出问题"></a>4. CTS 稀疏检出问题</h2><h3 id="4-1-问题"><a href="#4-1-问题" class="headerlink" title="4.1 问题"></a>4.1 问题</h3><p>为了减少下载量，CTS 使用了 partial clone 和 sparse checkout。构建过程中出现多个缺失模块，之后又在 Kati 阶段失败：</p>
+<pre><code class="language-text">test/vts/tools/build/tasks/framework/vtf_package.mk:83:
+error: FindEmulator: cd: cts/apps/CameraITS: No such file or directory
+</code></pre>
+<p><code>ALLOW_MISSING_DEPENDENCIES=true</code> 只能跳过缺失的构建依赖，不能解决 Makefile 中直接执行 <code>cd</code> 访问不存在目录的问题。</p>
+<h3 id="4-2-解决方法"><a href="#4-2-解决方法" class="headerlink" title="4.2 解决方法"></a>4.2 解决方法</h3><p>使用非 cone sparse checkout 精确补齐目录：</p>
+<pre><code class="language-bash">git -C cts sparse-checkout add &#39;/apps/CameraITS/&#39;
+</code></pre>
+<p>验证：</p>
+<pre><code class="language-bash">test -d cts/apps/CameraITS &amp;&amp; echo camera-its-ok
+</code></pre>
+<h3 id="4-3-知识点"><a href="#4-3-知识点" class="headerlink" title="4.3 知识点"></a>4.3 知识点</h3><ul>
+<li><code>ALLOW_MISSING_DEPENDENCIES</code> 只影响构建图中的模块依赖检查。</li>
+<li>Makefile 内部的 shell 命令仍要求实际路径存在。</li>
+<li>对大型 Android 仓库，partial clone 可以减少 Git object 下载量，sparse checkout 可以减少工作树占用。</li>
+<li>当错误形式为 <code>module not found</code> 时，可以考虑依赖绕过；当错误形式为 <code>cd: path: No such file or directory</code> 时，必须补齐真实路径。</li>
+</ul>
+<hr>
+<h2 id="5-基线-boot-构建"><a href="#5-基线-boot-构建" class="headerlink" title="5. 基线 boot 构建"></a>5. 基线 boot 构建</h2><p>构建命令：</p>
+<pre><code class="language-bash">source build/envsetup.sh
+lunch lineage_poplar-userdebug
+export ALLOW_MISSING_DEPENDENCIES=true
+mka bootimage -j2 2&gt;&amp;1 | tee build-boot.log
+</code></pre>
+<p>构建成功：</p>
+<pre><code class="language-text">[100%] Target boot image: out/target/product/poplar/boot.img
+build completed successfully
+</code></pre>
+<p>生成文件：</p>
+<pre><code class="language-text">out/target/product/poplar/boot.img
+out/target/product/poplar/obj/KERNEL_OBJ/arch/arm64/boot/Image.gz-dtb
+</code></pre>
+<h3 id="5-1-非致命警告"><a href="#5-1-非致命警告" class="headerlink" title="5.1 非致命警告"></a>5.1 非致命警告</h3><p>构建期间出现以下警告，但未阻止镜像生成：</p>
+<ol>
+<li>Clang 提示 <code>-fuse-ld=lld</code> 在部分 host 编译中未使用。</li>
+<li>Ubuntu 24.04 的 OpenSSL 3.0 将部分 ENGINE API 标记为 deprecated。</li>
+<li><code>scripts/gcc-version.sh</code> 无法执行部分 GCC 4.9 预编译工具。</li>
+<li><code>nsjail</code> 不可用，构建 sandbox 被禁用。</li>
+</ol>
+<p>这些信息不能单独视为构建失败。判断结果应以 Ninja&#x2F;Make 最终退出状态以及目标产物是否生成作为依据。</p>
+<hr>
+<h2 id="6-为什么-LineageOS-boot-无法直接启动当前-PE"><a href="#6-为什么-LineageOS-boot-无法直接启动当前-PE" class="headerlink" title="6. 为什么 LineageOS boot 无法直接启动当前 PE"></a>6. 为什么 LineageOS boot 无法直接启动当前 PE</h2><p>首次通过以下命令临时启动 LineageOS 生成的完整 boot：</p>
+<pre><code class="language-bash">fastboot boot ~/android/artifacts/poplar/boot-lineage18.1-baseline.img
+</code></pre>
+<p>设备卡在 Sony 第一屏。强制重启后重新进入原 PixelExperience。</p>
+<h3 id="6-1-根因"><a href="#6-1-根因" class="headerlink" title="6.1 根因"></a>6.1 根因</h3><p>Android boot image 不只有内核，还包含 ramdisk。LineageOS boot 中包含 LineageOS ramdisk，而设备 system 分区仍然是 PixelExperience。</p>
+<p>以下组件可能不匹配：</p>
+<ul>
+<li>init 配置</li>
+<li>fstab</li>
+<li>SELinux policy 装载流程</li>
+<li>vendor service 启动规则</li>
+<li>system&#x2F;vendor&#x2F;ramdisk 之间的接口</li>
+</ul>
+<p>所以“LineageOS boot 无法启动 PE system”不能证明新内核有问题。</p>
+<h3 id="6-2-恢复方法"><a href="#6-2-恢复方法" class="headerlink" title="6.2 恢复方法"></a>6.2 恢复方法</h3><p><code>fastboot boot</code> 是临时加载，不会覆盖 boot 分区。设备可通过以下方式恢复：</p>
+<pre><code class="language-text">长按 电源键 + 音量上键，直到连续震动三次
+</code></pre>
+<p>重新正常开机后仍会使用原 boot 分区。</p>
+<h3 id="6-3-知识点"><a href="#6-3-知识点" class="headerlink" title="6.3 知识点"></a>6.3 知识点</h3><ul>
+<li><code>fastboot boot image.img</code>：临时启动，通常不写分区，适合测试。</li>
+<li><code>fastboot flash boot image.img</code>：永久写入 boot 分区，测试阶段不应优先使用。</li>
+<li>单独替换 boot 并不等于安装完整 ROM。</li>
+<li>验证“内核是否可启动”时，应尽量保持 ramdisk 和 system 不变，只替换 kernel。</li>
+</ul>
+<hr>
+<h2 id="7-使用-PE-ramdisk-验证基础内核"><a href="#7-使用-PE-ramdisk-验证基础内核" class="headerlink" title="7. 使用 PE ramdisk 验证基础内核"></a>7. 使用 PE ramdisk 验证基础内核</h2><h3 id="7-1-PE-原-boot"><a href="#7-1-PE-原-boot" class="headerlink" title="7.1 PE 原 boot"></a>7.1 PE 原 boot</h3><p>原始路径：</p>
+<pre><code class="language-text">~/android/artifacts/poplar/boot.img
+</code></pre>
+<p>备份路径：</p>
+<pre><code class="language-text">~/android/artifacts/poplar/boot-pe-original.img
+</code></pre>
+<p>SHA-256：</p>
+<pre><code class="language-text">ea97de7dfaa6b56f4cd0b7ee4fe2a55ca53917aec1c436f96ff5242937be0808
+</code></pre>
+<h3 id="7-2-PE-boot-参数"><a href="#7-2-PE-boot-参数" class="headerlink" title="7.2 PE boot 参数"></a>7.2 PE boot 参数</h3><p>通过 <code>unpack_bootimg.py</code> 得到：</p>
+<pre><code class="language-text">boot magic: ANDROID!
+kernel load address: 0x8000
+ramdisk load address: 0x1000000
+second bootloader size: 0
+kernel tags load address: 0x100
+page size: 4096
+os version: 11.0.0
+os patch level: 2021-12
+boot image header version: 0
+ramdisk size: 824766
+</code></pre>
+<p>内核命令行：</p>
+<pre><code class="language-text">ehci-hcd.park=3 lpm_levels.sleep_disabled=1 sched_enable_hmp=0 sched_enable_power_aware=1 service_locator.enable=1 swiotlb=2048 androidboot.configfs=true androidboot.usbcontroller=a800000.dwc3 loop.max_part=7 androidboot.hardware=poplar buildvariant=userdebug
+</code></pre>
+<p>解包后的 PE ramdisk：</p>
+<pre><code class="language-text">/tmp/poplar-pe-boot/ramdisk
+</code></pre>
+<h3 id="7-3-混合-boot"><a href="#7-3-混合-boot" class="headerlink" title="7.3 混合 boot"></a>7.3 混合 boot</h3><p>使用 PE 原 ramdisk 和自编译 <code>Image.gz-dtb</code> 重新打包：</p>
+<pre><code class="language-text">~/android/artifacts/poplar/boot-pe-newkernel-baseline.img
+</code></pre>
+<p>内核哈希在打包前后完全一致：</p>
+<pre><code class="language-text">b6bc4e112db51b58d2a806f1a912b800a8516b55311c7b596eebf5e81f9ee4e6
+</code></pre>
+<p>临时启动成功：</p>
+<pre><code class="language-bash">fastboot boot ~/android/artifacts/poplar/boot-pe-newkernel-baseline.img
+</code></pre>
+<p>运行结果：</p>
+<pre><code class="language-text">Linux localhost 4.4.302-whatawurst #1 SMP PREEMPT ... aarch64
+</code></pre>
+<p>这证明未修改的 4.4.302 内核可以配合当前 PE ramdisk 和 system 正常启动。</p>
+<hr>
+<h2 id="8-KernelSU-Next-集成"><a href="#8-KernelSU-Next-集成" class="headerlink" title="8. KernelSU-Next 集成"></a>8. KernelSU-Next 集成</h2><h3 id="8-1-Git-基线"><a href="#8-1-Git-基线" class="headerlink" title="8.1 Git 基线"></a>8.1 Git 基线</h3><p>内核来自 tarball，因此先初始化本地 Git：</p>
+<pre><code class="language-bash">git -C kernel/sony/msm8998 init
+git -C kernel/sony/msm8998 add -A
+git -C kernel/sony/msm8998 commit -m &quot;Baseline whatawurst kernel 4.4.302&quot;
+</code></pre>
+<p>这样可以在 KernelSU 修改失败时准确查看差异或回退。</p>
+<h3 id="8-2-v3-3-0-失败"><a href="#8-2-v3-3-0-失败" class="headerlink" title="8.2 v3.3.0 失败"></a>8.2 v3.3.0 失败</h3><p>KernelSU-Next setup 脚本默认检出最新 tag，当时为 <code>v3.3.0</code>。</p>
+<p>编译错误：</p>
+<pre><code class="language-text">unknown type name &#39;syscall_fn_t&#39;
+fatal error: &#39;linux/compiler_types.h&#39; file not found
+</code></pre>
+<h4 id="根因"><a href="#根因" class="headerlink" title="根因"></a>根因</h4><p><code>v3.3.0</code> 的 arm64 syscall hook 依赖较新的 syscall wrapper ABI，包括：</p>
+<ul>
+<li><code>syscall_fn_t</code></li>
+<li><code>__arm64_sys_*</code> 风格 syscall</li>
+<li>新版 syscall table 调用约定</li>
+<li>新内核头文件 <code>linux/compiler_types.h</code></li>
+</ul>
+<p>Linux 4.4 的 arm64 syscall table 和函数签名与新内核不同。该问题不是补一个 typedef 就能安全解决，因为实际调用 ABI 也不一致。</p>
+<h4 id="解决方法"><a href="#解决方法" class="headerlink" title="解决方法"></a>解决方法</h4><p>放弃 <code>v3.3.0</code>，改用带 <code>legacy</code> 后缀的旧内核兼容 tag。</p>
+<h3 id="8-3-v3-2-0-legacy"><a href="#8-3-v3-2-0-legacy" class="headerlink" title="8.3 v3.2.0-legacy"></a>8.3 v3.2.0-legacy</h3><p>选用：</p>
+<pre><code class="language-text">v3.2.0-legacy
+</code></pre>
+<p>启用配置：</p>
+<pre><code class="language-text">CONFIG_KPROBES=y
+CONFIG_KSU=y
+</code></pre>
+<p>同时已有：</p>
+<pre><code class="language-text">CONFIG_EXT4_FS=y
+CONFIG_OVERLAY_FS=y
+CONFIG_KALLSYMS=y
+</code></pre>
+<h3 id="8-4-Linux-4-4-兼容补丁"><a href="#8-4-Linux-4-4-兼容补丁" class="headerlink" title="8.4 Linux 4.4 兼容补丁"></a>8.4 Linux 4.4 兼容补丁</h3><h4 id="问题一：ERR-PTR-隐式声明"><a href="#问题一：ERR-PTR-隐式声明" class="headerlink" title="问题一：ERR_PTR 隐式声明"></a>问题一：<code>ERR_PTR</code> 隐式声明</h4><p>错误：</p>
+<pre><code class="language-text">include/linux/bpf.h: implicit declaration of function &#39;ERR_PTR&#39;
+static declaration of &#39;ERR_PTR&#39; follows non-static declaration
+</code></pre>
+<p>根因：KernelSU 的 <code>setuid_hook.c</code> 在包含 <code>linux/err.h</code> 前包含了 <code>linux/bpf.h</code>。该 4.4 内核的 <code>bpf.h</code> 假设 <code>ERR_PTR</code> 已经声明。</p>
+<p>解决：在 <code>linux/bpf.h</code> 前加入：</p>
+<pre><code class="language-c">#include &lt;linux/err.h&gt;
+</code></pre>
+<p>文件：</p>
+<pre><code class="language-text">KernelSU-Next/kernel/hook/setuid_hook.c
+</code></pre>
+<h4 id="问题二：不存在的-sched-UAPI-头文件"><a href="#问题二：不存在的-sched-UAPI-头文件" class="headerlink" title="问题二：不存在的 sched UAPI 头文件"></a>问题二：不存在的 sched UAPI 头文件</h4><p>错误：</p>
+<pre><code class="language-text">fatal error: &#39;uapi/linux/sched/types.h&#39; file not found
+</code></pre>
+<p>根因：<code>uapi/linux/sched/types.h</code> 不存在于当前 Linux 4.4 树。</p>
+<p>解决：删除该 include：</p>
+<pre><code class="language-c">#include &lt;uapi/linux/sched/types.h&gt;
+</code></pre>
+<p>文件：</p>
+<pre><code class="language-text">KernelSU-Next/kernel/selinux/rules.c
+</code></pre>
+<h4 id="问题三：in-compat-syscall-不存在"><a href="#问题三：in-compat-syscall-不存在" class="headerlink" title="问题三：in_compat_syscall() 不存在"></a>问题三：<code>in_compat_syscall()</code> 不存在</h4><p>错误：</p>
+<pre><code class="language-text">implicit declaration of function &#39;in_compat_syscall&#39;
+</code></pre>
+<p>根因：该 API 来自较新内核，Linux 4.4 arm64 使用 <code>is_compat_task()</code> 判断当前是否为 compat 任务。</p>
+<p>解决：</p>
+<pre><code class="language-c">in_compat_syscall()
+</code></pre>
+<p>替换为：</p>
+<pre><code class="language-c">is_compat_task()
+</code></pre>
+<p>文件：</p>
+<pre><code class="language-text">KernelSU-Next/kernel/runtime/ksud_integration.c
+</code></pre>
+<h3 id="8-5-v3-2-0-legacy-构建结果"><a href="#8-5-v3-2-0-legacy-构建结果" class="headerlink" title="8.5 v3.2.0-legacy 构建结果"></a>8.5 v3.2.0-legacy 构建结果</h3><p>构建日志确认：</p>
+<pre><code class="language-text">KernelSU-Next version: 33129
+KernelSU-Next tag: v3.2.0-legacy
+KernelSU-Next: Hook mode: Kprobes
+build completed successfully
+</code></pre>
+<p>最终 <code>.config</code>：</p>
+<pre><code class="language-text">CONFIG_KPROBES=y
+CONFIG_KSU=y
+</code></pre>
+<p>KernelSU 内核 SHA-256：</p>
+<pre><code class="language-text">accd79cb62249487484b01242b7ff863a389470e5a787bed97b03947b9efb4d8
+</code></pre>
+<hr>
+<h2 id="9-KernelSU-混合-boot"><a href="#9-KernelSU-混合-boot" class="headerlink" title="9. KernelSU 混合 boot"></a>9. KernelSU 混合 boot</h2><p>使用 PE 原 ramdisk 与 KernelSU 内核生成：</p>
+<pre><code class="language-text">~/android/artifacts/poplar/boot-pe-kernelsu-legacy.img
+</code></pre>
+<p>解包后 kernel 哈希与构建产物一致：</p>
+<pre><code class="language-text">accd79cb62249487484b01242b7ff863a389470e5a787bed97b03947b9efb4d8
+</code></pre>
+<p>该镜像已经通过以下命令临时启动成功：</p>
+<pre><code class="language-bash">fastboot boot ~/android/artifacts/poplar/boot-pe-kernelsu-legacy.img
+</code></pre>
+<p>这证明集成 KernelSU 的内核本身能够完成启动，但不等于 KernelSU 用户空间授权流程已经验证成功。</p>
+<hr>
+<h2 id="10-KernelSU-Manager-问题"><a href="#10-KernelSU-Manager-问题" class="headerlink" title="10. KernelSU Manager 问题"></a>10. KernelSU Manager 问题</h2><h3 id="10-1-原-Manager-实际不是-KernelSU-Next"><a href="#10-1-原-Manager-实际不是-KernelSU-Next" class="headerlink" title="10.1 原 Manager 实际不是 KernelSU-Next"></a>10.1 原 Manager 实际不是 KernelSU-Next</h3><p>设备原先安装的包：</p>
+<pre><code class="language-text">package: me.weishu.kernelsu
+versionName: v3.0.0
+versionCode: 32179
+minSdk: 26
+targetSdk: 36
+</code></pre>
+<p>该版本属于官方 KernelSU Manager，而不是 KernelSU-Next 对应发行包。</p>
+<h3 id="10-2-原-Manager-闪退根因"><a href="#10-2-原-Manager-闪退根因" class="headerlink" title="10.2 原 Manager 闪退根因"></a>10.2 原 Manager 闪退根因</h3><p>隔离 NFC 日志后捕获到：</p>
+<pre><code class="language-text">Fatal signal 31 (SIGSYS)
+code 1 (SYS_SECCOMP)
+Cause: seccomp prevented call to disallowed arm64 system call 142
+process: libksud.so
+</code></pre>
+<p>这说明闪退不是普通 Java 异常，而是 Manager 内置的 <code>libksud.so</code> 调用了 Android 11 应用 seccomp 策略不允许的 syscall 142，被内核发送 <code>SIGSYS</code> 强制终止。</p>
+<h3 id="10-3-KernelSU-Next-v3-2-0-Manager-无法安装"><a href="#10-3-KernelSU-Next-v3-2-0-Manager-无法安装" class="headerlink" title="10.3 KernelSU-Next v3.2.0 Manager 无法安装"></a>10.3 KernelSU-Next v3.2.0 Manager 无法安装</h3><p>错误：</p>
+<pre><code class="language-text">INSTALL_FAILED_OLDER_SDK
+Requires newer sdk version #31 (current version is #30)
+</code></pre>
+<p>原因：</p>
+<ul>
+<li>KernelSU-Next v3.2.0 Manager 要求 Android 12 &#x2F; SDK 31。</li>
+<li>当前 PixelExperience 是 Android 11 &#x2F; SDK 30。</li>
+</ul>
+<p>这属于 APK manifest 的最低 SDK 限制，与内核是否支持 KernelSU 无关。</p>
+<h3 id="10-4-KernelSU-Next-v3-0-1-Manager"><a href="#10-4-KernelSU-Next-v3-0-1-Manager" class="headerlink" title="10.4 KernelSU-Next v3.0.1 Manager"></a>10.4 KernelSU-Next v3.0.1 Manager</h3><p>下载地址：</p>
+<pre><code class="language-text">https://github.com/KernelSU-Next/KernelSU-Next/releases/download/v3.0.1/KernelSU_Next_v3.0.1_32967-release.apk
+</code></pre>
+<p>本地路径：</p>
+<pre><code class="language-text">/tmp/KernelSU_Next_v3.0.1.apk
+</code></pre>
+<p>该版本可以安装在 Android 11，并且不再出现原官方 v3.0.0 Manager 的 <code>libksud.so</code> seccomp 闪退。</p>
+<p>它在设备运行原 Magisk boot 时提示：</p>
+<pre><code class="language-text">无法在内核中找到 KernelSU v2 签名
+</code></pre>
+<p>该提示目前不能视为 Manager 与 v3.2.0-legacy 内核不兼容，因为看到提示时设备已经重启回原 PE&#x2F;Magisk boot。原 boot 本来就没有 KernelSU。</p>
+<p>正确验证方式是：临时启动 <code>boot-pe-kernelsu-legacy.img</code> 后，再打开 KernelSU-Next v3.0.1 Manager。</p>
+<hr>
+<h2 id="11-NFC-崩溃对诊断的干扰"><a href="#11-NFC-崩溃对诊断的干扰" class="headerlink" title="11. NFC 崩溃对诊断的干扰"></a>11. NFC 崩溃对诊断的干扰</h2><p>PE 当前还有独立 NFC 崩溃循环：</p>
+<pre><code class="language-text">com.android.nfc
+android.hardware.nfc@1.1-service
+libnfc-nci.so
+nfc_nci_nxp.so
+</code></pre>
+<p>NFC 服务会快速生成 tombstone，覆盖 KernelSU Manager 的崩溃记录。</p>
+<p>为了隔离日志，执行过：</p>
+<pre><code class="language-bash">adb shell &quot;su -c &#39;setprop ctl.stop vendor.nfc_hal_service&#39;&quot;
+adb shell &quot;su -c &#39;am force-stop com.android.nfc&#39;&quot;
+</code></pre>
+<p>验证状态：</p>
+<pre><code class="language-bash">adb shell getprop init.svc.vendor.nfc_hal_service
+</code></pre>
+<p>输出：</p>
+<pre><code class="language-text">stopped
+</code></pre>
+<p>设备重启后 NFC HAL 通常会由 init 重新启动。</p>
+<h3 id="知识点"><a href="#知识点" class="headerlink" title="知识点"></a>知识点</h3><ul>
+<li><code>logcat -b crash</code> 是环形缓冲区，频繁崩溃会覆盖旧记录。</li>
+<li>原生进程崩溃的完整信息通常位于 <code>/data/tombstones/</code>。</li>
+<li>排障前应先停止无关的崩溃循环，否则容易把错误归因到错误的组件。</li>
+<li>仅根据“应用闪退”现象无法判断是 Java、JNI、SELinux、seccomp 还是内核接口问题。</li>
+</ul>
+<hr>
+<h2 id="12-Git-提交与当前源码状态"><a href="#12-Git-提交与当前源码状态" class="headerlink" title="12. Git 提交与当前源码状态"></a>12. Git 提交与当前源码状态</h2><p>主内核仓库已有提交：</p>
+<pre><code class="language-text">0a1d0225 poplar: integrate KernelSU-Next
+15ac5648 vendor: include KernelSU-Next sources
+</code></pre>
+<p>v3.2.0-legacy 的 Linux 4.4 兼容补丁分支：</p>
+<pre><code class="language-text">poplar-linux-4.4-v3.2.0
+</code></pre>
+<p>补丁提交：</p>
+<pre><code class="language-text">48876bfd compat: support Linux 4.4
+</code></pre>
+<p>为了尝试匹配 v3.0.1 Manager，嵌套 KernelSU-Next 工作树后来被切换到了：</p>
+<pre><code class="language-text">v3.0.1-legacy
+commit 1fe50d16
+</code></pre>
+<p>但该版本目前：</p>
+<ul>
+<li>尚未应用 Linux 4.4 兼容补丁。</li>
+<li>尚未重新编译。</li>
+<li>尚未提交进主内核仓库。</li>
+<li>因源码布局变化，主内核仓库会显示大量文件删除和新增。</li>
+</ul>
+<p>在确认确实需要降级内核前，不应提交这些大范围变更。</p>
+<p>恢复已验证 v3.2.0 源码：</p>
+<pre><code class="language-bash">git -C kernel/sony/msm8998/KernelSU-Next checkout poplar-linux-4.4-v3.2.0
+</code></pre>
+<hr>
+<h2 id="13-当前推荐验证流程"><a href="#13-当前推荐验证流程" class="headerlink" title="13. 当前推荐验证流程"></a>13. 当前推荐验证流程</h2><h3 id="阶段一：确认-Manager"><a href="#阶段一：确认-Manager" class="headerlink" title="阶段一：确认 Manager"></a>阶段一：确认 Manager</h3><p>确认当前安装的是 KernelSU-Next v3.0.1，而不是原官方 v3.0.0：</p>
+<pre><code class="language-bash">adb shell dumpsys package me.weishu.kernelsu | grep -E &#39;versionName|versionCode|codePath&#39;
+</code></pre>
+<p>期望 version code 接近 KernelSU-Next 发布包的 <code>32967</code>。</p>
+<h3 id="阶段二：临时启动已验证的-KSU-内核"><a href="#阶段二：临时启动已验证的-KSU-内核" class="headerlink" title="阶段二：临时启动已验证的 KSU 内核"></a>阶段二：临时启动已验证的 KSU 内核</h3><pre><code class="language-bash">adb reboot bootloader
+fastboot devices
+fastboot boot ~/android/artifacts/poplar/boot-pe-kernelsu-legacy.img
+</code></pre>
+<h3 id="阶段三：确认内核"><a href="#阶段三：确认内核" class="headerlink" title="阶段三：确认内核"></a>阶段三：确认内核</h3><pre><code class="language-bash">adb wait-for-device
+adb shell uname -a
+</code></pre>
+<h3 id="阶段四：打开-Manager"><a href="#阶段四：打开-Manager" class="headerlink" title="阶段四：打开 Manager"></a>阶段四：打开 Manager</h3><pre><code class="language-bash">adb shell monkey -p me.weishu.kernelsu 1
+</code></pre>
+<p>检查 Manager 是否识别 KernelSU，并尝试给测试应用或 shell 授予 root。</p>
+<h3 id="阶段五：功能验证"><a href="#阶段五：功能验证" class="headerlink" title="阶段五：功能验证"></a>阶段五：功能验证</h3><p>验证目标不只是“应用能打开”，还应包括：</p>
+<ol>
+<li>Manager 能读取 KernelSU 版本。</li>
+<li>Manager 显示内核支持状态正常。</li>
+<li>能产生超级用户授权请求。</li>
+<li>被授权应用实际获得 UID 0。</li>
+<li>重启和卸载模块后系统仍可恢复。</li>
+</ol>
+<p>如果 v3.0.1 Manager 在 v3.2.0-legacy 内核下仍明确提示协议或签名不兼容，再考虑构建匹配的 <code>v3.0.1-legacy</code> 内核。</p>
+<hr>
+<h2 id="14-安全与恢复原则"><a href="#14-安全与恢复原则" class="headerlink" title="14. 安全与恢复原则"></a>14. 安全与恢复原则</h2><h3 id="14-1-测试时只临时启动"><a href="#14-1-测试时只临时启动" class="headerlink" title="14.1 测试时只临时启动"></a>14.1 测试时只临时启动</h3><p>优先使用：</p>
+<pre><code class="language-bash">fastboot boot image.img
+</code></pre>
+<p>不要在未验证前执行：</p>
+<pre><code class="language-bash">fastboot flash boot image.img
+</code></pre>
+<h3 id="14-2-卡第一屏时恢复"><a href="#14-2-卡第一屏时恢复" class="headerlink" title="14.2 卡第一屏时恢复"></a>14.2 卡第一屏时恢复</h3><pre><code class="language-text">长按 电源键 + 音量上键，直到连续震动三次
+</code></pre>
+<p>因为使用的是临时启动，重新开机后会回到原 PE&#x2F;Magisk boot。</p>
+<h3 id="14-3-保留原始镜像与哈希"><a href="#14-3-保留原始镜像与哈希" class="headerlink" title="14.3 保留原始镜像与哈希"></a>14.3 保留原始镜像与哈希</h3><p>必须长期保留：</p>
+<pre><code class="language-text">boot-pe-original.img
+boot-pe-newkernel-baseline.img
+boot-pe-kernelsu-legacy.img
+</code></pre>
+<p>每次重新打包后都应：</p>
+<ol>
+<li>解包检查 header 参数。</li>
+<li>对比打包前后的 kernel SHA-256。</li>
+<li>检查镜像大小没有超过 boot 分区。</li>
+<li>先临时启动，再考虑永久刷写。</li>
+</ol>
+<hr>
+<h2 id="15-关键结论"><a href="#15-关键结论" class="headerlink" title="15. 关键结论"></a>15. 关键结论</h2><ol>
+<li>LineageOS boot 卡第一屏是 ramdisk&#x2F;system 不匹配，不能证明内核失败。</li>
+<li>PE ramdisk + 基础 4.4.302 内核已成功启动，基础内核可用。</li>
+<li>KernelSU-Next v3.3.0 使用新版 arm64 syscall ABI，不适合该 Linux 4.4 内核。</li>
+<li>KernelSU-Next v3.2.0-legacy 经三个小型兼容补丁后成功编译。</li>
+<li>PE ramdisk + v3.2.0-legacy KSU 内核已成功启动。</li>
+<li>原官方 KernelSU Manager v3.0.0 因 Android 11 seccomp 阻止 syscall 142 而原生崩溃。</li>
+<li>KernelSU-Next v3.2.0 Manager 要求 SDK 31，不能安装到 Android 11。</li>
+<li>KernelSU-Next v3.0.1 Manager 可安装且不再发生原 seccomp 闪退。</li>
+<li>v3.0.1 Manager 在原 Magisk boot 下找不到 KSU 是正常现象，必须在 KSU 临时 boot 下重新验证。</li>
+<li>当前下一目标是验证 Manager 与已成功启动的 v3.2.0-legacy 内核能否完成实际 root 授权。</li>
+</ol>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/label/%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA/" rel="tag"># 环境搭建</a>
+              <a href="/label/%E7%BB%8F%E9%AA%8C%E6%80%BB%E7%BB%93/" rel="tag"># 经验总结</a>
+              <a href="/label/%E5%88%B7%E6%9C%BA/" rel="tag"># 刷机</a>
+              <a href="/label/root/" rel="tag"># root</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2026/05/23/IDA-PRO9-3%E7%9A%84%E7%A0%B4%E8%A7%A3%E6%B3%A8%E5%86%8C%E6%9C%BA%E5%92%8C%E9%85%8D%E7%BD%AEmcp/" rel="prev" title="IDA PRO9.3的破解注册机和配置mcp">
+      <i class="fa fa-chevron-left"></i> IDA PRO9.3的破解注册机和配置mcp
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2077/07/28/%E5%8D%9A%E5%AE%A2%E7%AE%80%E4%BB%8B/" rel="next" title="欢迎来到我的博客">
+      欢迎来到我的博客 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-%E7%9B%AE%E6%A0%87"><span class="nav-number">1.</span> <span class="nav-text">1. 目标</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-%E7%8E%AF%E5%A2%83%E4%BF%A1%E6%81%AF"><span class="nav-number">2.</span> <span class="nav-text">2. 环境信息</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-%E6%9E%84%E5%BB%BA%E4%B8%BB%E6%9C%BA"><span class="nav-number">2.1.</span> <span class="nav-text">2.1 构建主机</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-%E8%AE%BE%E5%A4%87"><span class="nav-number">2.2.</span> <span class="nav-text">2.2 设备</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-%E6%BA%90%E7%A0%81%E5%87%86%E5%A4%87"><span class="nav-number">3.</span> <span class="nav-text">3. 源码准备</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-Android-%E6%BA%90%E7%A0%81"><span class="nav-number">3.1.</span> <span class="nav-text">3.1 Android 源码</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-%E5%86%85%E6%A0%B8%E6%BA%90%E7%A0%81"><span class="nav-number">3.2.</span> <span class="nav-text">3.2 内核源码</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-Proprietary-vendor"><span class="nav-number">3.3.</span> <span class="nav-text">3.3 Proprietary vendor</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-CTS-%E7%A8%80%E7%96%8F%E6%A3%80%E5%87%BA%E9%97%AE%E9%A2%98"><span class="nav-number">4.</span> <span class="nav-text">4. CTS 稀疏检出问题</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-%E9%97%AE%E9%A2%98"><span class="nav-number">4.1.</span> <span class="nav-text">4.1 问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-%E8%A7%A3%E5%86%B3%E6%96%B9%E6%B3%95"><span class="nav-number">4.2.</span> <span class="nav-text">4.2 解决方法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-%E7%9F%A5%E8%AF%86%E7%82%B9"><span class="nav-number">4.3.</span> <span class="nav-text">4.3 知识点</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-%E5%9F%BA%E7%BA%BF-boot-%E6%9E%84%E5%BB%BA"><span class="nav-number">5.</span> <span class="nav-text">5. 基线 boot 构建</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-%E9%9D%9E%E8%87%B4%E5%91%BD%E8%AD%A6%E5%91%8A"><span class="nav-number">5.1.</span> <span class="nav-text">5.1 非致命警告</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-%E4%B8%BA%E4%BB%80%E4%B9%88-LineageOS-boot-%E6%97%A0%E6%B3%95%E7%9B%B4%E6%8E%A5%E5%90%AF%E5%8A%A8%E5%BD%93%E5%89%8D-PE"><span class="nav-number">6.</span> <span class="nav-text">6. 为什么 LineageOS boot 无法直接启动当前 PE</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#6-1-%E6%A0%B9%E5%9B%A0"><span class="nav-number">6.1.</span> <span class="nav-text">6.1 根因</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-2-%E6%81%A2%E5%A4%8D%E6%96%B9%E6%B3%95"><span class="nav-number">6.2.</span> <span class="nav-text">6.2 恢复方法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-3-%E7%9F%A5%E8%AF%86%E7%82%B9"><span class="nav-number">6.3.</span> <span class="nav-text">6.3 知识点</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#7-%E4%BD%BF%E7%94%A8-PE-ramdisk-%E9%AA%8C%E8%AF%81%E5%9F%BA%E7%A1%80%E5%86%85%E6%A0%B8"><span class="nav-number">7.</span> <span class="nav-text">7. 使用 PE ramdisk 验证基础内核</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#7-1-PE-%E5%8E%9F-boot"><span class="nav-number">7.1.</span> <span class="nav-text">7.1 PE 原 boot</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-2-PE-boot-%E5%8F%82%E6%95%B0"><span class="nav-number">7.2.</span> <span class="nav-text">7.2 PE boot 参数</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-3-%E6%B7%B7%E5%90%88-boot"><span class="nav-number">7.3.</span> <span class="nav-text">7.3 混合 boot</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#8-KernelSU-Next-%E9%9B%86%E6%88%90"><span class="nav-number">8.</span> <span class="nav-text">8. KernelSU-Next 集成</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#8-1-Git-%E5%9F%BA%E7%BA%BF"><span class="nav-number">8.1.</span> <span class="nav-text">8.1 Git 基线</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#8-2-v3-3-0-%E5%A4%B1%E8%B4%A5"><span class="nav-number">8.2.</span> <span class="nav-text">8.2 v3.3.0 失败</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%A0%B9%E5%9B%A0"><span class="nav-number">8.2.1.</span> <span class="nav-text">根因</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%A7%A3%E5%86%B3%E6%96%B9%E6%B3%95"><span class="nav-number">8.2.2.</span> <span class="nav-text">解决方法</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#8-3-v3-2-0-legacy"><span class="nav-number">8.3.</span> <span class="nav-text">8.3 v3.2.0-legacy</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#8-4-Linux-4-4-%E5%85%BC%E5%AE%B9%E8%A1%A5%E4%B8%81"><span class="nav-number">8.4.</span> <span class="nav-text">8.4 Linux 4.4 兼容补丁</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E9%97%AE%E9%A2%98%E4%B8%80%EF%BC%9AERR-PTR-%E9%9A%90%E5%BC%8F%E5%A3%B0%E6%98%8E"><span class="nav-number">8.4.1.</span> <span class="nav-text">问题一：ERR_PTR 隐式声明</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E9%97%AE%E9%A2%98%E4%BA%8C%EF%BC%9A%E4%B8%8D%E5%AD%98%E5%9C%A8%E7%9A%84-sched-UAPI-%E5%A4%B4%E6%96%87%E4%BB%B6"><span class="nav-number">8.4.2.</span> <span class="nav-text">问题二：不存在的 sched UAPI 头文件</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E9%97%AE%E9%A2%98%E4%B8%89%EF%BC%9Ain-compat-syscall-%E4%B8%8D%E5%AD%98%E5%9C%A8"><span class="nav-number">8.4.3.</span> <span class="nav-text">问题三：in_compat_syscall() 不存在</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#8-5-v3-2-0-legacy-%E6%9E%84%E5%BB%BA%E7%BB%93%E6%9E%9C"><span class="nav-number">8.5.</span> <span class="nav-text">8.5 v3.2.0-legacy 构建结果</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#9-KernelSU-%E6%B7%B7%E5%90%88-boot"><span class="nav-number">9.</span> <span class="nav-text">9. KernelSU 混合 boot</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#10-KernelSU-Manager-%E9%97%AE%E9%A2%98"><span class="nav-number">10.</span> <span class="nav-text">10. KernelSU Manager 问题</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#10-1-%E5%8E%9F-Manager-%E5%AE%9E%E9%99%85%E4%B8%8D%E6%98%AF-KernelSU-Next"><span class="nav-number">10.1.</span> <span class="nav-text">10.1 原 Manager 实际不是 KernelSU-Next</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#10-2-%E5%8E%9F-Manager-%E9%97%AA%E9%80%80%E6%A0%B9%E5%9B%A0"><span class="nav-number">10.2.</span> <span class="nav-text">10.2 原 Manager 闪退根因</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#10-3-KernelSU-Next-v3-2-0-Manager-%E6%97%A0%E6%B3%95%E5%AE%89%E8%A3%85"><span class="nav-number">10.3.</span> <span class="nav-text">10.3 KernelSU-Next v3.2.0 Manager 无法安装</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#10-4-KernelSU-Next-v3-0-1-Manager"><span class="nav-number">10.4.</span> <span class="nav-text">10.4 KernelSU-Next v3.0.1 Manager</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#11-NFC-%E5%B4%A9%E6%BA%83%E5%AF%B9%E8%AF%8A%E6%96%AD%E7%9A%84%E5%B9%B2%E6%89%B0"><span class="nav-number">11.</span> <span class="nav-text">11. NFC 崩溃对诊断的干扰</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%9F%A5%E8%AF%86%E7%82%B9"><span class="nav-number">11.1.</span> <span class="nav-text">知识点</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#12-Git-%E6%8F%90%E4%BA%A4%E4%B8%8E%E5%BD%93%E5%89%8D%E6%BA%90%E7%A0%81%E7%8A%B6%E6%80%81"><span class="nav-number">12.</span> <span class="nav-text">12. Git 提交与当前源码状态</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#13-%E5%BD%93%E5%89%8D%E6%8E%A8%E8%8D%90%E9%AA%8C%E8%AF%81%E6%B5%81%E7%A8%8B"><span class="nav-number">13.</span> <span class="nav-text">13. 当前推荐验证流程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%98%B6%E6%AE%B5%E4%B8%80%EF%BC%9A%E7%A1%AE%E8%AE%A4-Manager"><span class="nav-number">13.1.</span> <span class="nav-text">阶段一：确认 Manager</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%98%B6%E6%AE%B5%E4%BA%8C%EF%BC%9A%E4%B8%B4%E6%97%B6%E5%90%AF%E5%8A%A8%E5%B7%B2%E9%AA%8C%E8%AF%81%E7%9A%84-KSU-%E5%86%85%E6%A0%B8"><span class="nav-number">13.2.</span> <span class="nav-text">阶段二：临时启动已验证的 KSU 内核</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%98%B6%E6%AE%B5%E4%B8%89%EF%BC%9A%E7%A1%AE%E8%AE%A4%E5%86%85%E6%A0%B8"><span class="nav-number">13.3.</span> <span class="nav-text">阶段三：确认内核</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%98%B6%E6%AE%B5%E5%9B%9B%EF%BC%9A%E6%89%93%E5%BC%80-Manager"><span class="nav-number">13.4.</span> <span class="nav-text">阶段四：打开 Manager</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%98%B6%E6%AE%B5%E4%BA%94%EF%BC%9A%E5%8A%9F%E8%83%BD%E9%AA%8C%E8%AF%81"><span class="nav-number">13.5.</span> <span class="nav-text">阶段五：功能验证</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#14-%E5%AE%89%E5%85%A8%E4%B8%8E%E6%81%A2%E5%A4%8D%E5%8E%9F%E5%88%99"><span class="nav-number">14.</span> <span class="nav-text">14. 安全与恢复原则</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#14-1-%E6%B5%8B%E8%AF%95%E6%97%B6%E5%8F%AA%E4%B8%B4%E6%97%B6%E5%90%AF%E5%8A%A8"><span class="nav-number">14.1.</span> <span class="nav-text">14.1 测试时只临时启动</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#14-2-%E5%8D%A1%E7%AC%AC%E4%B8%80%E5%B1%8F%E6%97%B6%E6%81%A2%E5%A4%8D"><span class="nav-number">14.2.</span> <span class="nav-text">14.2 卡第一屏时恢复</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#14-3-%E4%BF%9D%E7%95%99%E5%8E%9F%E5%A7%8B%E9%95%9C%E5%83%8F%E4%B8%8E%E5%93%88%E5%B8%8C"><span class="nav-number">14.3.</span> <span class="nav-text">14.3 保留原始镜像与哈希</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#15-%E5%85%B3%E9%94%AE%E7%BB%93%E8%AE%BA"><span class="nav-number">15.</span> <span class="nav-text">15. 关键结论</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="ALFFL"
+      src="/images/avatar.gif">
+  <p class="site-author-name" itemprop="name">ALFFL</p>
+  <div class="site-description" itemprop="description">追求源于热爱</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">18</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">14</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 2025-12 – 
+  <span itemprop="copyrightYear">2026</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ALFFL</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
