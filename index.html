@@ -242,6 +242,1448 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://alffl1st.github.io/2026/08/14/%E6%9F%90%E5%8D%9A16-4-0%E6%95%B0%E6%8D%AE%E5%8C%85s%E5%80%BC%E9%80%86%E5%90%91%EF%BC%88%E8%AF%A6%E7%BB%86%E7%89%88%EF%BC%89/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="ALFFL">
+      <meta itemprop="description" content="追求源于热爱">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="ALFFL1st">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2026/08/14/%E6%9F%90%E5%8D%9A16-4-0%E6%95%B0%E6%8D%AE%E5%8C%85s%E5%80%BC%E9%80%86%E5%90%91%EF%BC%88%E8%AF%A6%E7%BB%86%E7%89%88%EF%BC%89/" class="post-title-link" itemprop="url">某博16.4.0数据包s值逆向（详细版）</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2026-08-14 20:27:51 / 修改时间：20:28:58" itemprop="dateCreated datePublished" datetime="2026-08-14T20:27:51+08:00">2026-08-14</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <p>微博请求参数 <code>s</code> 逆向分析完整复盘</p>
+<blockquote>
+<p>这是一份面向初级逆向工程学习者的实验记录。它记录了本次 Android ARM64 <code>libslib.so</code> 分析从 Java 调用链、JNI、外层 ELF Loader、Frida 动态观察、隐藏 ELF dump、IDA 静态分析，到 Python 独立复现的完整过程。</p>
+</blockquote>
+<h2 id="1-最终结论"><a href="#1-最终结论" class="headerlink" title="1. 最终结论"></a>1. 最终结论</h2><p>本次目标是还原请求参数 <code>s</code> 的 mode 3 算法。</p>
+<p>最终确认的 Java 调用链：</p>
+<pre><code class="language-text">RequestParam.initUserParam
+  -&gt; js.a(user.uid)
+  -&gt; SLib.newCalculateS(user.uid, 3)
+  -&gt; SLib.nativeNewCalculateS(Context, String, int)
+  -&gt; 外层 libslib.so
+  -&gt; 运行时解包并手工映射隐藏 ELF
+  -&gt; 隐藏 ELF 的 JNI_OnLoad
+  -&gt; RegisterNatives
+  -&gt; 真实 nativeNewCalculateS
+  -&gt; calculate_s_mode3
+</code></pre>
+<p>磁盘上的 <code>libslib.so</code> 主要是加载器和完整性检查逻辑，真正的 <code>s</code> 算法在运行时映射的匿名隐藏 ELF 中。</p>
+<p>mode 3 的最终算法是：</p>
+<pre><code class="language-python">U = MD5(uid).hexdigest()
+S = MD5(secret32).hexdigest()
+D = MD5(device_code).hexdigest()
+
+primary = SHA512(S + D + U).hexdigest()
+selector = SHA512(D + U).hexdigest()
+
+cursor = 0
+result = []
+for i in range(8):
+    cursor = ord(selector[15 * i + cursor]) &amp; 0x0F
+    result.append(primary[15 * i + cursor])
+
+s = &quot;&quot;.join(result)
+</code></pre>
+<p>本次最终回归样本：</p>
+<pre><code class="language-text">uid         = 8225577424
+secret32    = 5l0WXnhiY4pJ794KIJ7Rw5F45VXg9sjo
+device_code = 10G4095010
+native      = 317bb874
+python      = 317bb874
+</code></pre>
+<hr>
+<h2 id="2-工作目录和主要文件"><a href="#2-工作目录和主要文件" class="headerlink" title="2. 工作目录和主要文件"></a>2. 工作目录和主要文件</h2><p>工作目录：</p>
+<pre><code class="language-text">C:\Users\Administrator\Desktop\learn\weibo
+</code></pre>
+<p>主要文件：</p>
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>125_94cba4e69fdea50baa44c4b62cffd687.apk</code></td>
+<td>原始 APK</td>
+</tr>
+<tr>
+<td><code>125_94cba4e69fdea50baa44c4b62cffd687.apk.jadx</code></td>
+<td>JADX 反编译结果</td>
+</tr>
+<tr>
+<td><code>calculate_s.py</code></td>
+<td>mode 3 Python 复现</td>
+</tr>
+<tr>
+<td><code>frida_dump_slib_payload.js</code></td>
+<td>Frida 注入、RegisterNatives、dump、算法中间值 hook</td>
+</tr>
+<tr>
+<td><code>rebuild_slib_payload.py</code></td>
+<td>将匿名内存段包装成可导入 IDA 的合成 ELF</td>
+</tr>
+<tr>
+<td><code>calculate_s_inputs.json</code></td>
+<td>动态捕获的输入和最终输出</td>
+</tr>
+<tr>
+<td><code>frida_calculate_inputs.log</code></td>
+<td>关键动态日志</td>
+</tr>
+<tr>
+<td><code>slib-dump-complete/</code></td>
+<td>较完整的隐藏 ELF 内存 dump 和元数据</td>
+</tr>
+<tr>
+<td><code>repro/libslib_prepatch_rebuilt.so.i64</code></td>
+<td>当前使用的隐藏 ELF prepatch IDB</td>
+</tr>
+<tr>
+<td><code>yuanso/libslib.so.i64</code></td>
+<td>外层原始 so 的 IDB</td>
+</tr>
+<tr>
+<td><code>libslib_reverse_analysis_guide.md</code></td>
+<td>前期分析指南，包含较早阶段记录</td>
+</tr>
+<tr>
+<td><code>weibo_s_reverse_analysis_complete.md</code></td>
+<td>本文，完整复盘</td>
+</tr>
+</tbody></table>
+<p>本文正文摘录了所有关键代码和操作。没有重复粘贴整个 1154 行 Frida dumper，完整可执行源码就在同目录的 <code>frida_dump_slib_payload.js</code>；同样，完整 ELF 重建脚本和 Python 复现脚本分别是 <code>rebuild_slib_payload.py</code>、<code>calculate_s.py</code>。阅读本文时可直接打开这些文件查看未截取的上下文。</p>
+<p>注意：<code>libslib_reverse_analysis_guide.md</code> 中保留了一轮较早样本 <code>2032848787248 -&gt; 5feb09b6</code>。本文以最终样本 <code>8225577424 -&gt; 317bb874</code> 为准，不要混用两轮样本的中间值。</p>
+<hr>
+<h2 id="3-初学者需要先理解的概念"><a href="#3-初学者需要先理解的概念" class="headerlink" title="3. 初学者需要先理解的概念"></a>3. 初学者需要先理解的概念</h2><h3 id="3-1-Java-和-native-的边界"><a href="#3-1-Java-和-native-的边界" class="headerlink" title="3.1 Java 和 native 的边界"></a>3.1 Java 和 native 的边界</h3><p>Java 中的 native 方法只有声明，没有 Java 方法体：</p>
+<pre><code class="language-java">private native String nativeNewCalculateS(
+        Context context,
+        String input,
+        int mode
+);
+</code></pre>
+<p>真正实现位于 <code>.so</code> 文件中。Java 调 native 的过程需要 JNI 建立映射。</p>
+<h3 id="3-2-JNI-静态导出和动态注册"><a href="#3-2-JNI-静态导出和动态注册" class="headerlink" title="3.2 JNI 静态导出和动态注册"></a>3.2 JNI 静态导出和动态注册</h3><p>静态导出通常使用长名称：</p>
+<pre><code class="language-text">Java_com_sina_weibo_security_SLib_nativeNewCalculateS
+</code></pre>
+<p>动态注册则在 <code>JNI_OnLoad</code> 中调用 <code>RegisterNatives</code>：</p>
+<pre><code class="language-c">struct JNINativeMethod {
+    const char *name;
+    const char *signature;
+    void *fnPtr;
+};
+</code></pre>
+<p>因此，找不到 <code>Java_...</code> 并不代表 native 方法不存在。</p>
+<h3 id="3-3-ASLR-和相对偏移"><a href="#3-3-ASLR-和相对偏移" class="headerlink" title="3.3 ASLR 和相对偏移"></a>3.3 ASLR 和相对偏移</h3><p>Android 每次启动进程时，绝对地址可能变化：</p>
+<pre><code class="language-text">绝对运行时地址：0x718599fac4
+镜像基址：      0x718598d000
+相对偏移：      0x12ac4
+</code></pre>
+<p>稳定记录应使用：</p>
+<pre><code class="language-text">relative_offset = runtime_address - image_base
+</code></pre>
+<p>本次真实目标：</p>
+<pre><code class="language-text">nativeNewCalculateS = hidden_image_base + 0x12ac4
+mode3                = hidden_image_base + 0x161b4
+md5                  = hidden_image_base + 0x2c50c
+sha512               = hidden_image_base + 0x18444
+</code></pre>
+<hr>
+<h2 id="4-第一步：从请求参数反推-Java-调用链"><a href="#4-第一步：从请求参数反推-Java-调用链" class="headerlink" title="4. 第一步：从请求参数反推 Java 调用链"></a>4. 第一步：从请求参数反推 Java 调用链</h2><p>逆向时不要一开始就在 native 函数里猜“哪个像加密”。先从业务结果反向追踪。</p>
+<h3 id="4-1-找到请求参数-s"><a href="#4-1-找到请求参数-s" class="headerlink" title="4.1 找到请求参数 s"></a>4.1 找到请求参数 <code>s</code></h3><p>在 JADX 中搜索：</p>
+<pre><code class="language-text">&quot;s&quot;
+putString
+getS
+</code></pre>
+<p>发现类似：</p>
+<pre><code class="language-java">bundle.putString(&quot;s&quot;, getS());
+</code></pre>
+<p>曾经看到过这样的反编译结果：</p>
+<pre><code class="language-java">bundle.putString(com.hpplay.soap.a.m, getS());
+</code></pre>
+<p>这不表示 key 不是 <code>s</code>。JADX 可能把重复常量显示成字段引用。继续查看该字段的实际值，确认：</p>
+<pre><code class="language-java">public static final String m = &quot;s&quot;;
+</code></pre>
+<h3 id="4-2-追踪-mS-的赋值"><a href="#4-2-追踪-mS-的赋值" class="headerlink" title="4.2 追踪 mS 的赋值"></a>4.2 追踪 <code>mS</code> 的赋值</h3><p>在 <code>RequestParam.initUserParam()</code> 中找到：</p>
+<pre><code class="language-java">this.mS = com.sina.weibo.utils.js.a(user.uid);
+</code></pre>
+<p>因此 <code>s</code> 的输入来自用户 UID。</p>
+<h3 id="4-3-分析-js-a-String"><a href="#4-3-分析-js-a-String" class="headerlink" title="4.3 分析 js.a(String)"></a>4.3 分析 <code>js.a(String)</code></h3><p>反编译逻辑可整理为：</p>
+<pre><code class="language-java">public static String a(String uid) {
+    synchronized (I) {
+        if (TextUtils.equals(uid, G) &amp;&amp; !TextUtils.isEmpty(H)) {
+            return H;
+        }
+
+        if (WeiboApplication.l != null) {
+            G = uid;
+            H = SLib.getInstance().newCalculateS(uid, 3);
+            return H;
+        }
+
+        return &quot;&quot;;
+    }
+}
+</code></pre>
+<p>关键结论：</p>
+<ol>
+<li>第一个输入是原始 UID。</li>
+<li>mode 固定为 <code>3</code>。</li>
+<li><code>G</code> 保存上一次 UID。</li>
+<li><code>H</code> 保存上一次结果。</li>
+<li>相同 UID 可能直接命中缓存，不再次进入 native。</li>
+<li>需要重启进程、切换 UID 或清空缓存后，才能稳定观察底层调用。</li>
+</ol>
+<h3 id="4-4-分析-SLib"><a href="#4-4-分析-SLib" class="headerlink" title="4.4 分析 SLib"></a>4.4 分析 <code>SLib</code></h3><p>Java wrapper 结构：</p>
+<pre><code class="language-java">static {
+    System.loadLibrary(&quot;slib&quot;);
+}
+
+public String newCalculateS(String input, int mode) {
+    if (sLoadLibrarySuccess &amp;&amp; sInit) {
+        return nativeNewCalculateS(this.mAppContext, input, mode);
+    }
+    return null;
+}
+</code></pre>
+<p>初始化链中还发现：</p>
+<pre><code class="language-java">SLib.getInstance().init(application, bm.M);
+</code></pre>
+<p>本次 <code>bm.M</code> 的值为：</p>
+<pre><code class="language-text">10G4095010
+</code></pre>
+<p>运行时 hook 还捕获到：</p>
+<pre><code class="language-text">secret32 = 5l0WXnhiY4pJ794KIJ7Rw5F45VXg9sjo
+</code></pre>
+<hr>
+<h2 id="5-第二步：在-IDA-中检查外层-so"><a href="#5-第二步：在-IDA-中检查外层-so" class="headerlink" title="5. 第二步：在 IDA 中检查外层 so"></a>5. 第二步：在 IDA 中检查外层 so</h2><h3 id="5-1-IDA-的基础操作"><a href="#5-1-IDA-的基础操作" class="headerlink" title="5.1 IDA 的基础操作"></a>5.1 IDA 的基础操作</h3><p>常用快捷键：</p>
+<table>
+<thead>
+<tr>
+<th>操作</th>
+<th>快捷键</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>搜索字符串</td>
+<td><code>Shift+F12</code></td>
+</tr>
+<tr>
+<td>跳转地址</td>
+<td><code>G</code></td>
+</tr>
+<tr>
+<td>查看交叉引用</td>
+<td>在地址&#x2F;符号上按 <code>X</code></td>
+</tr>
+<tr>
+<td>定义函数</td>
+<td><code>P</code></td>
+</tr>
+<tr>
+<td>转换为数据</td>
+<td><code>D</code></td>
+</tr>
+<tr>
+<td>取消定义</td>
+<td><code>U</code></td>
+</tr>
+<tr>
+<td>重命名</td>
+<td><code>N</code></td>
+</tr>
+<tr>
+<td>注释</td>
+<td><code>;</code></td>
+</tr>
+<tr>
+<td>反编译</td>
+<td><code>F5</code></td>
+</tr>
+<tr>
+<td>查看汇编&#x2F;伪代码</td>
+<td><code>Tab</code></td>
+</tr>
+<tr>
+<td>设置函数类型</td>
+<td>右键函数或使用类型编辑</td>
+</tr>
+</tbody></table>
+<h3 id="5-2-先搜索这些目标"><a href="#5-2-先搜索这些目标" class="headerlink" title="5.2 先搜索这些目标"></a>5.2 先搜索这些目标</h3><pre><code class="language-text">Java_
+JNI_OnLoad
+RegisterNatives
+nativeNewCalculateS
+newCalculateS
+SLib
+com/sina/weibo/security/SLib
+WBSecurity
+</code></pre>
+<p>本次发现：</p>
+<ul>
+<li>找到了 <code>JNI_OnLoad</code>。</li>
+<li>找不到 <code>Java_com_sina_...nativeNewCalculateS</code>。</li>
+<li>找不到 <code>nativeNewCalculateS</code> 明文。</li>
+<li>可见的注册表属于 <code>WBSecurity</code>，不是 <code>SLib</code>。</li>
+</ul>
+<h3 id="5-3-WBSecurity-注册表不是-s-算法"><a href="#5-3-WBSecurity-注册表不是-s-算法" class="headerlink" title="5.3 WBSecurity 注册表不是 s 算法"></a>5.3 WBSecurity 注册表不是 <code>s</code> 算法</h3><p>外层 <code>JNI_OnLoad</code> 注册了：</p>
+<pre><code class="language-text">isUnpackSuccess  ()Z
+getUnPackResult  ()Ljava/lang/String;
+getTimeCost      ()Ljava/lang/String;
+</code></pre>
+<p>这些名字说明它们用于解包状态和耗时检查。</p>
+<p>不要因为看到 <code>getSignature</code>、<code>security</code> 或 <code>sign</code> 就认为它们一定生成了请求参数。正确判断依据是调用链：</p>
+<pre><code class="language-text">请求 s：RequestParam -&gt; js.a -&gt; SLib.newCalculateS
+完整性检查：WBSecurity.startCheck -&gt; getSignature
+</code></pre>
+<hr>
+<h2 id="6-第三步：识别控制流混淆"><a href="#6-第三步：识别控制流混淆" class="headerlink" title="6. 第三步：识别控制流混淆"></a>6. 第三步：识别控制流混淆</h2><h3 id="6-1-混淆的典型表现"><a href="#6-1-混淆的典型表现" class="headerlink" title="6.1 混淆的典型表现"></a>6.1 混淆的典型表现</h3><p>在外层和隐藏 ELF 中都看到了：</p>
+<pre><code class="language-text">大量随机 32 位常量
+多个嵌套 while
+状态变量反复和常量比较
+简单动作被几十个跳转包围
+伪代码比实际业务逻辑长很多
+</code></pre>
+<p>例如真实逻辑可能只是：</p>
+<pre><code class="language-c">if (callback != NULL) {
+    return callback(vm, reserved);
+}
+</code></pre>
+<p>混淆后可能变成：</p>
+<pre><code class="language-c">state = 0x2EC36AE5;
+while (1) {
+    if (state == 0x74856499) {
+        ...
+    }
+    if (state == 0x2EC36AE5) {
+        ...
+    }
+}
+</code></pre>
+<h3 id="6-2-初学者常犯错误"><a href="#6-2-初学者常犯错误" class="headerlink" title="6.2 初学者常犯错误"></a>6.2 初学者常犯错误</h3><p>错误：把每一个随机常量都当作密钥、魔数或业务参数。</p>
+<p>解决：优先标记真实副作用：</p>
+<ul>
+<li>系统调用。</li>
+<li><code>BL</code>&#x2F;<code>BLR</code> 调用。</li>
+<li>全局变量读写。</li>
+<li><code>mmap</code>、<code>mprotect</code>、<code>dlopen</code>、<code>dlsym</code>。</li>
+<li>函数指针保存。</li>
+<li>JNI 函数表调用。</li>
+<li>字符串、哈希状态和输出缓冲区。</li>
+</ul>
+<p>状态常量通常只是控制流编号。先恢复“做了什么”，再恢复“如何绕路”。</p>
+<hr>
+<h2 id="7-第四步：证明外层是自定义-ELF-Loader"><a href="#7-第四步：证明外层是自定义-ELF-Loader" class="headerlink" title="7. 第四步：证明外层是自定义 ELF Loader"></a>7. 第四步：证明外层是自定义 ELF Loader</h2><h3 id="7-1-导入函数证据"><a href="#7-1-导入函数证据" class="headerlink" title="7.1 导入函数证据"></a>7.1 导入函数证据</h3><p>外层 so 出现了三组重要导入：</p>
+<p>从 APK&#x2F;ZIP 读取：</p>
+<pre><code class="language-text">OpenArchive
+FindEntry
+ExtractToMemory
+CloseArchive
+</code></pre>
+<p>映射 ELF：</p>
+<pre><code class="language-text">mmap
+mmap64
+mprotect
+pread64
+getpagesize
+</code></pre>
+<p>加载依赖和解析符号：</p>
+<p>三组同时出现时，可以高度怀疑存在自定义 Loader。</p>
+<h3 id="7-2-字符串证据"><a href="#7-2-字符串证据" class="headerlink" title="7.2 字符串证据"></a>7.2 字符串证据</h3><p>通过字符串搜索和 XOR 解密，恢复出：</p>
+<pre><code class="language-text">OpenArchive failed, lib_path:
+FindEntry failed, lib_path:
+unzip cost:
+find so offset or size failed
+read elf header
+WBElfReader read failed
+__load_so
+Failed pre-link image
+JNI_OnLoad
+</code></pre>
+<p>这些字符串形成了完整链路：</p>
+<pre><code class="language-text">打开 APK
+  -&gt; 找到 so
+  -&gt; 提取内容
+  -&gt; 读取 ELF Header
+  -&gt; 映射 PT_LOAD
+  -&gt; pre-link
+  -&gt; 解析依赖和符号
+  -&gt; 查找 JNI_OnLoad
+  -&gt; 调用 JNI_OnLoad
+</code></pre>
+<h3 id="7-3-关键外层函数"><a href="#7-3-关键外层函数" class="headerlink" title="7.3 关键外层函数"></a>7.3 关键外层函数</h3><p>本次给外层 IDB 识别出的高层函数包括：</p>
+<pre><code class="language-text">unpack_library_constructor
+unpack_context_ctor
+unpack_embedded_elf
+locate_payload_and_read_elf_header
+prelink_unpacked_image
+loaded_elf_image_ctor
+prelink_elf_image
+link_unpacked_elf_image
+resolve_unpacked_JNI_OnLoad
+resolve_symbol_in_dependencies
+reserve_elf_address_space
+map_elf_load_segments
+call_unpacked_JNI_OnLoad
+</code></pre>
+<h3 id="7-4-手工-ELF-Loader-的关键识别方式"><a href="#7-4-手工-ELF-Loader-的关键识别方式" class="headerlink" title="7.4 手工 ELF Loader 的关键识别方式"></a>7.4 手工 ELF Loader 的关键识别方式</h3><p>重点看这些动作：</p>
+<pre><code class="language-c">reserved = mmap(NULL, image_size, PROT_NONE,
+                MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+
+mmap(reserved + segment_offset,
+     segment_size,
+     final_protection,
+     MAP_FIXED | MAP_PRIVATE | MAP_ANONYMOUS,
+     -1,
+     0);
+
+mprotect(segment, size, final_protection);
+</code></pre>
+<p>如果代码还读取 ELF Header、Program Header、<code>PT_LOAD</code>、动态表和 <code>st_value</code>，基本可以确认是在手工加载 ELF。</p>
+<hr>
+<h2 id="8-第五步：恢复隐藏-JNI-OnLoad"><a href="#8-第五步：恢复隐藏-JNI-OnLoad" class="headerlink" title="8. 第五步：恢复隐藏 JNI_OnLoad"></a>8. 第五步：恢复隐藏 <code>JNI_OnLoad</code></h2><h3 id="8-1-为什么要找隐藏-JNI-OnLoad"><a href="#8-1-为什么要找隐藏-JNI-OnLoad" class="headerlink" title="8.1 为什么要找隐藏 JNI_OnLoad"></a>8.1 为什么要找隐藏 <code>JNI_OnLoad</code></h3><p>外层 <code>JNI_OnLoad</code> 只注册了 <code>WBSecurity</code>。真正的 <code>SLib</code> 注册发生在第二层隐藏 ELF 中。</p>
+<p>所以要找到：</p>
+<pre><code class="language-text">隐藏 JNI_OnLoad 被解析的位置
+隐藏 JNI_OnLoad 被调用的位置
+</code></pre>
+<h3 id="8-2-解析函数地址"><a href="#8-2-解析函数地址" class="headerlink" title="8.2 解析函数地址"></a>8.2 解析函数地址</h3><p>在 <code>resolve_unpacked_JNI_OnLoad</code> 中，先解密得到：</p>
+<pre><code class="language-text">JNI_OnLoad\0
+</code></pre>
+<p>随后查找 ELF 符号并计算：</p>
+<pre><code class="language-c">image-&gt;jni_onload = image-&gt;load_bias + symbol-&gt;st_value;
+</code></pre>
+<p>关键汇编：</p>
+<pre><code class="language-asm">LDR X15, [X8,#8]       ; Elf64_Sym.st_value
+LDUR X17, [X29,#...]   ; load bias
+ADD X15, X15, X17
+STR X15, [X20,#0x180]  ; 保存隐藏入口
+</code></pre>
+<p>外层关键偏移：</p>
+<pre><code class="language-text">libslib.so + 0x239A8  保存隐藏 JNI_OnLoad
+libslib.so + 0x1C7C0  调用隐藏 JNI_OnLoad
+</code></pre>
+<p>调用前的高层逻辑：</p>
+<pre><code class="language-c">callback = unpack_ctx-&gt;loaded_image-&gt;jni_onload;
+if (callback != NULL) {
+    return callback(vm, reserved);
+}
+</code></pre>
+<p>对应核心指令：</p>
+<pre><code class="language-asm">BLR X8
+</code></pre>
+<h3 id="8-3-为什么静态-IDA-看不到算法"><a href="#8-3-为什么静态-IDA-看不到算法" class="headerlink" title="8.3 为什么静态 IDA 看不到算法"></a>8.3 为什么静态 IDA 看不到算法</h3><p>因为隐藏 ELF 只有运行时才：</p>
+<ol>
+<li>从 APK 或内存中取得内容。</li>
+<li>在匿名内存中映射。</li>
+<li>完成重定位和依赖解析。</li>
+<li>注册 <code>SLib</code> native 方法。</li>
+</ol>
+<p>此时原始 IDB 只能看到 Loader，不能看到真实 <code>nativeNewCalculateS</code>。</p>
+<hr>
+<h2 id="9-第六步：Frida-动态分析"><a href="#9-第六步：Frida-动态分析" class="headerlink" title="9. 第六步：Frida 动态分析"></a>9. 第六步：Frida 动态分析</h2><h3 id="9-1-Frida-环境检查"><a href="#9-1-Frida-环境检查" class="headerlink" title="9.1 Frida 环境检查"></a>9.1 Frida 环境检查</h3><p>遇到 spawn 超时，不要直接认定是反调试。先逐层检查：</p>
+<pre><code class="language-text">ADB 连接
+  -&gt; 设备端 frida-server
+  -&gt; 主机和设备版本
+  -&gt; 端口占用
+  -&gt; 最小 spawn
+  -&gt; 简单脚本
+  -&gt; 完整脚本
+</code></pre>
+<p>本次检查中发现：</p>
+<ul>
+<li>主机 Frida：<code>16.1.8</code></li>
+<li>设备端 server：<code>frd1618</code>，版本 <code>16.1.8</code></li>
+<li>Android：API 33</li>
+<li>设备 ABI：<code>arm64-v8a</code></li>
+<li>设备已有一个 server 占用 <code>27042</code></li>
+</ul>
+<p>曾经执行启动命令得到：</p>
+<pre><code class="language-text">Address already in use
+</code></pre>
+<p>这表示启动了第二个 server，不表示现有 server 版本错误。解决方法是确认旧 PID、结束旧实例、重新启动一个干净实例。</p>
+<p>版本检查：</p>
+<pre><code class="language-powershell">adb shell su -c &quot;/data/local/tmp/frd1618 --version&quot;
+</code></pre>
+<p>启动 server：</p>
+<pre><code class="language-powershell">adb shell &quot;su -c &#39;/data/local/tmp/frd1618 &gt;/data/local/tmp/frd1618.log 2&gt;&amp;1 &amp;&#39;&quot;
+</code></pre>
+<p>最小 spawn 探针：</p>
+<pre><code class="language-powershell">frida -U -f com.sina.weibo -q -t 8 `
+  -e &quot;console.log(&#39;[probe] injected pid=&#39; + Process.id);&quot;
+</code></pre>
+<p>最小探针成功后，再加载完整脚本：</p>
+<pre><code class="language-powershell">frida -U -f com.sina.weibo -l &quot;.\frida_dump_slib_payload.js&quot;
+</code></pre>
+<h3 id="9-2-Frida-兼容性问题"><a href="#9-2-Frida-兼容性问题" class="headerlink" title="9.2 Frida 兼容性问题"></a>9.2 Frida 兼容性问题</h3><h4 id="attachModuleObserver-不可用"><a href="#attachModuleObserver-不可用" class="headerlink" title="attachModuleObserver 不可用"></a><code>attachModuleObserver</code> 不可用</h4><p>脚本输出：</p>
+<pre><code class="language-text">module observer unavailable; falling back to polling
+</code></pre>
+<p>解决方式：</p>
+<pre><code class="language-javascript">const timer = setInterval(function () {
+    const module = Process.findModuleByName(&#39;libslib.so&#39;);
+    if (module !== null) {
+        clearInterval(timer);
+        installLoaderHooks(module);
+    }
+}, 1);
+</code></pre>
+<h4 id="enumerateRangesSync-参数差异"><a href="#enumerateRangesSync-参数差异" class="headerlink" title="enumerateRangesSync 参数差异"></a><code>enumerateRangesSync</code> 参数差异</h4><p>兼容写法：</p>
+<pre><code class="language-javascript">try {
+    ranges = Process.enumerateRangesSync(&#39;r-x&#39;);
+} catch (_) {
+    ranges = Process.enumerateRangesSync({
+        protection: &#39;r-x&#39;,
+        coalesce: false
+    });
+}
+</code></pre>
+<h4 id="匿名映射的-file-字段"><a href="#匿名映射的-file-字段" class="headerlink" title="匿名映射的 file 字段"></a>匿名映射的 <code>file</code> 字段</h4><p>不要写：</p>
+<pre><code class="language-javascript">range.file.path
+</code></pre>
+<p>因为匿名映射的 <code>range.file</code> 可能是 <code>null</code> 或 <code>undefined</code>。应写：</p>
+<pre><code class="language-javascript">range.file == null ? null : range.file.path
+</code></pre>
+<h4 id="proc-self-maps-非-UTF-8"><a href="#proc-self-maps-非-UTF-8" class="headerlink" title="/proc/self/maps 非 UTF-8"></a><code>/proc/self/maps</code> 非 UTF-8</h4><p>直接使用文本读取可能遇到：</p>
+<pre><code class="language-text">can&#39;t decode byte 0xff
+</code></pre>
+<p>解决办法是按原始字节读取，只把 ASCII 范围转换成字符串，再用正则解析地址、权限和路径。</p>
+<h3 id="9-3-Hook-RegisterNatives"><a href="#9-3-Hook-RegisterNatives" class="headerlink" title="9.3 Hook RegisterNatives"></a>9.3 Hook <code>RegisterNatives</code></h3><p>Android ARM64 的 JNI 函数表中，本次环境的 <code>RegisterNatives</code> 位于索引 <code>215</code>：</p>
+<pre><code class="language-javascript">const env = Java.vm.getEnv();
+const table = env.handle.readPointer();
+const registerNatives = table
+    .add(215 * Process.pointerSize)
+    .readPointer();
+</code></pre>
+<p><code>JNINativeMethod</code> 每项 24 字节：</p>
+<pre><code class="language-javascript">const entry = methods.add(i * Process.pointerSize * 3);
+const name = entry.readPointer().readCString();
+const signature = entry.add(8).readPointer().readCString();
+const fn = entry.add(16).readPointer();
+</code></pre>
+<p>关键 hook 逻辑：</p>
+<pre><code class="language-javascript">Interceptor.attach(registerNatives, {
+    onEnter(args) {
+        const methods = args[2];
+        const count = args[3].toInt32();
+        const className = Java.cast(args[0], Java.use(&#39;java.lang.Class&#39;));
+
+        for (let i = 0; i &lt; count; i++) {
+            const entry = methods.add(i * 24);
+            const name = entry.readPointer().readCString();
+            const signature = entry.add(8).readPointer().readCString();
+            const fn = entry.add(16).readPointer();
+            console.log(className + &#39; &#39; + name + &#39; &#39; + signature +
+                        &#39; &#39; + fn);
+        }
+    }
+});
+</code></pre>
+<p>本次动态事实：</p>
+<pre><code class="language-text">class      com.sina.weibo.security.SLib
+method     nativeNewCalculateS
+signature  (Landroid/content/Context;Ljava/lang/String;I)Ljava/lang/String;
+fn         0x718599fac4
+imageBase  0x718598d000
+offset     0x12ac4
+</code></pre>
+<p>其他 <code>SLib</code> 注册方法：</p>
+<pre><code class="language-text">nativeInit
+nativeNewCalculateS
+nativeGetV1TimeCost
+nativeGetV2TimeCost
+nativeCheck
+nativeGetCheckErr
+nativeGetCheckErrType
+nativeGetPkgTimeCost
+</code></pre>
+<h3 id="9-4-读取-libc-std-string"><a href="#9-4-读取-libc-std-string" class="headerlink" title="9.4 读取 libc++ std::string"></a>9.4 读取 libc++ <code>std::string</code></h3><p>本次 ARM64 libc++ 字符串使用短字符串优化和长字符串两种布局。Frida 读取函数：</p>
+<pre><code class="language-javascript">function readStdString(value) {
+    const object = ptr(value);
+    const first = object.readU8();
+    let size;
+    let data;
+
+    if ((first &amp; 1) !== 0) {
+        size = Number(object.add(Process.pointerSize)
+            .readU64().toString());
+        data = object.add(Process.pointerSize * 2).readPointer();
+    } else {
+        size = first &gt;&gt;&gt; 1;
+        data = object.add(1);
+    }
+
+    return {
+        object: object.toString(),
+        data: data.toString(),
+        size,
+        text: size === 0 ? &#39;&#39; : data.readUtf8String(size)
+    };
+}
+</code></pre>
+<p>不要把 JNI <code>jstring</code>、C 字符串和 C++ <code>std::string</code> 当成同一种对象。它们的指针和内存布局不同。</p>
+<h3 id="9-5-Hook-mode-3、MD5-和-SHA-512"><a href="#9-5-Hook-mode-3、MD5-和-SHA-512" class="headerlink" title="9.5 Hook mode 3、MD5 和 SHA-512"></a>9.5 Hook mode 3、MD5 和 SHA-512</h3><p>脚本中使用稳定的 image offset：</p>
+<pre><code class="language-javascript">const MODE3_OFFSET = 0x161b4;
+const MD5_OFFSET = 0x2c50c;
+const SHA512_OFFSET = 0x18444;
+
+Interceptor.attach(imageBase.add(MODE3_OFFSET), {
+    onEnter(args) {
+        this.output = this.context.x8;
+        console.log(&#39;mode3 inputs=&#39; + JSON.stringify([
+            readStdString(args[0]).text,
+            readStdString(args[1]).text,
+            readStdString(args[2]).text
+        ]));
+    },
+    onLeave() {
+        console.log(&#39;mode3 output=&#39; + readStdString(this.output).text);
+    }
+});
+</code></pre>
+<p>MD5 hook 的核心：</p>
+<pre><code class="language-javascript">Interceptor.attach(imageBase.add(MD5_OFFSET), {
+    onEnter(args) {
+        this.output = args[2];
+        const size = args[1].toInt32();
+        console.log(&#39;md5 input=&#39; + args[0].readUtf8String(size));
+    },
+    onLeave() {
+        console.log(bytesToHex(this.output.readByteArray(16)));
+    }
+});
+</code></pre>
+<p>SHA-512 hook 的核心：</p>
+<pre><code class="language-javascript">Interceptor.attach(imageBase.add(SHA512_OFFSET), {
+    onEnter(args) {
+        this.output = args[2];
+        const size = args[1].toInt32();
+        console.log(&#39;sha512 input=&#39; + args[0].readUtf8String(size));
+    },
+    onLeave() {
+        console.log(bytesToHex(this.output.readByteArray(64)));
+    }
+});
+</code></pre>
+<hr>
+<h2 id="10-第七步：dump-隐藏-ELF"><a href="#10-第七步：dump-隐藏-ELF" class="headerlink" title="10. 第七步：dump 隐藏 ELF"></a>10. 第七步：dump 隐藏 ELF</h2><h3 id="10-1-为什么要-dump-匿名内存"><a href="#10-1-为什么要-dump-匿名内存" class="headerlink" title="10.1 为什么要 dump 匿名内存"></a>10.1 为什么要 dump 匿名内存</h3><p>隐藏 ELF 没有正常文件路径，<code>Process.findModuleByAddress()</code> 可能返回空：</p>
+<pre><code class="language-text">moduleName = null
+mappingFile = null
+</code></pre>
+<p>但它仍然有匿名映射。必须记录：</p>
+<ul>
+<li>起始地址。</li>
+<li>结束地址。</li>
+<li>权限。</li>
+<li>每段的大小。</li>
+<li>目标函数所在偏移。</li>
+<li>与本次运行对应的 metadata。</li>
+</ul>
+<h3 id="10-2-为什么只-dump-r-x-不够"><a href="#10-2-为什么只-dump-r-x-不够" class="headerlink" title="10.2 为什么只 dump r-x 不够"></a>10.2 为什么只 dump <code>r-x</code> 不够</h3><p>算法会读取：</p>
+<ul>
+<li>代码段。</li>
+<li>只读常量。</li>
+<li>哈希初始向量。</li>
+<li>hex 查找表。</li>
+<li>GOT 和全局状态。</li>
+<li>运行时重定位数据。</li>
+<li>尾部 <code>rw-</code> 数据段。</li>
+</ul>
+<p>只 dump 可执行段会导致 IDA 中大量：</p>
+<pre><code class="language-text">MEMORY[...]
+</code></pre>
+<p>或出现未映射的全局引用。</p>
+<h3 id="10-3-本次完整-dump"><a href="#10-3-本次完整-dump" class="headerlink" title="10.3 本次完整 dump"></a>10.3 本次完整 dump</h3><p><code>slib-dump-complete/payload_metadata.json</code> 中记录的主段：</p>
+<pre><code class="language-text">0x718598d000 + 0x12000  r-x  73728
+0x718599f000 + 0x01000  rwx   4096
+0x71859a0000 + 0x05000  r-x  20480
+0x71859a5000 + 0x02000  rwx   8192
+0x71859a7000 + 0x19000  r-x 102400
+</code></pre>
+<p>补充尾段：</p>
+<pre><code class="language-text">0x71859c3000 + 0x02000  rw-
+0x71859c8000 + 0x02000  rw-
+</code></pre>
+<p>dump 时遇到的问题：尾部 <code>rw-</code> 映射不是在代码映射出现时就稳定存在。解决方式：</p>
+<ol>
+<li>先在 <code>RegisterNatives</code> 取得真实目标。</li>
+<li>在第一次 <code>nativeNewCalculateS</code> 调用时再次 dump。</li>
+<li>读取实时 <code>/proc/self/maps</code>。</li>
+<li>补抓后续出现的 <code>rw-</code> 段。</li>
+</ol>
+<h3 id="10-4-自修改-wrapper-和-prepatch-dump"><a href="#10-4-自修改-wrapper-和-prepatch-dump" class="headerlink" title="10.4 自修改 wrapper 和 prepatch dump"></a>10.4 自修改 wrapper 和 prepatch dump</h3><p>早期 dump 中，<code>nativeNewCalculateS</code> 的入口可能已经被运行时 trampoline 覆盖：</p>
+<pre><code class="language-asm">LDR X16, =TARGET
+BR  X16
+</code></pre>
+<p>这会造成两个误判：</p>
+<ul>
+<li>以为函数只有几条指令。</li>
+<li>以为 IDA 函数边界错了。</li>
+</ul>
+<p>解决办法：</p>
+<ul>
+<li>保存运行前或较早时刻的内存快照。</li>
+<li>对比不同时间点的入口字节。</li>
+<li>使用 <code>prepatch_full.bin</code> 恢复被覆盖的函数序言。</li>
+<li>在 IDA 中重新定义函数。</li>
+</ul>
+<p>最终使用的 mode 3 起点：</p>
+<pre><code class="language-text">0x161b4
+</code></pre>
+<hr>
+<h2 id="11-第八步：用-Python-把内存段重建成-ELF"><a href="#11-第八步：用-Python-把内存段重建成-ELF" class="headerlink" title="11. 第八步：用 Python 把内存段重建成 ELF"></a>11. 第八步：用 Python 把内存段重建成 ELF</h2><p>dump 出来的是多个内存片段，不一定有原始 ELF Header。为了让 IDA 更容易识别，使用 <code>rebuild_slib_payload.py</code> 生成一个最小 ARM64 ELF64。</p>
+<h3 id="11-1-重建脚本的核心"><a href="#11-1-重建脚本的核心" class="headerlink" title="11.1 重建脚本的核心"></a>11.1 重建脚本的核心</h3><pre><code class="language-python">ELF_HEADER_SIZE = 64
+PROGRAM_HEADER_SIZE = 56
+PAYLOAD_FILE_OFFSET = 0x1000
+
+
+def build_memory_image(dump_dir, metadata):
+    base = int(metadata[&quot;reconstructedBase&quot;], 0)
+    end = int(metadata[&quot;reconstructedEnd&quot;], 0)
+    image = bytearray(end - base)
+
+    for memory_range in metadata[&quot;ranges&quot;]:
+        dump_file = memory_range.get(&quot;dumpFile&quot;)
+        if dump_file is None:
+            continue
+
+        range_base = int(memory_range[&quot;base&quot;], 0)
+        expected_size = int(memory_range[&quot;size&quot;])
+        data = (dump_dir / dump_file).read_bytes()
+
+        if len(data) != expected_size:
+            raise ValueError(&quot;dump size mismatch&quot;)
+
+        offset = range_base - base
+        image[offset:offset + len(data)] = data
+
+    return base, bytes(image)
+</code></pre>
+<p>创建最小 ELF：</p>
+<pre><code class="language-python">def make_elf(payload):
+    ident = b&quot;\x7fELF&quot; + bytes([
+        2,  # ELFCLASS64
+        1,  # little endian
+        1,  # current ELF version
+        0,  # ELFOSABI_NONE
+        0,
+    ]) + bytes(7)
+
+    elf_header = struct.pack(
+        &quot;&lt;16sHHIQQQIHHHHHH&quot;,
+        ident,
+        3,      # ET_DYN
+        183,    # EM_AARCH64
+        1,
+        0,
+        64,
+        0,
+        0,
+        64,
+        56,
+        1,
+        0,
+        0,
+        0,
+        0,
+    )
+
+    program_header = struct.pack(
+        &quot;&lt;IIQQQQQQ&quot;,
+        1,              # PT_LOAD
+        7,              # R | W | X
+        0x1000,         # file offset
+        0,
+        0,
+        len(payload),
+        len(payload),
+        0x1000,
+    )
+
+    padding = bytes(0x1000 - len(elf_header) - len(program_header))
+    return elf_header + program_header + padding + payload
+</code></pre>
+<h3 id="11-2-执行命令"><a href="#11-2-执行命令" class="headerlink" title="11.2 执行命令"></a>11.2 执行命令</h3><pre><code class="language-powershell">python &quot;.\rebuild_slib_payload.py&quot; `
+  &quot;.\slib-dump-complete&quot; `
+  --output &quot;.\slib-dump-complete\libslib_payload_rebuilt.so&quot;
+</code></pre>
+<h3 id="11-3-这个-ELF-的限制"><a href="#11-3-这个-ELF-的限制" class="headerlink" title="11.3 这个 ELF 的限制"></a>11.3 这个 ELF 的限制</h3><p>它是分析用合成 ELF，不是原始隐藏 ELF 的完整恢复：</p>
+<ul>
+<li>没有恢复原始 section table。</li>
+<li>没有完全恢复原始 program header 布局。</li>
+<li>文件偏移重新安排。</li>
+<li>guard page 使用零填充。</li>
+<li>反映的是 dump 时刻的自修改状态。</li>
+</ul>
+<p>它的目的只有一个：</p>
+<pre><code class="language-text">保持 image offset 不变，让 IDA 能建立代码和数据引用。
+</code></pre>
+<h3 id="11-4-文件偏移计算"><a href="#11-4-文件偏移计算" class="headerlink" title="11.4 文件偏移计算"></a>11.4 文件偏移计算</h3><p>合成 ELF 中 payload 从文件偏移 <code>0x1000</code> 开始：</p>
+<pre><code class="language-text">ELF file offset = 0x1000 + image offset
+                = 0x1000 + 0x12ac4
+                = 0x13ac4
+</code></pre>
+<p>不要把 <code>0x13ac4</code> 和原始 ELF 的真实 file offset 混为一谈。它只是合成文件中的偏移。</p>
+<hr>
+<h2 id="12-第九步：把隐藏-ELF-导入-IDA"><a href="#12-第九步：把隐藏-ELF-导入-IDA" class="headerlink" title="12. 第九步：把隐藏 ELF 导入 IDA"></a>12. 第九步：把隐藏 ELF 导入 IDA</h2><h3 id="12-1-导入方式"><a href="#12-1-导入方式" class="headerlink" title="12.1 导入方式"></a>12.1 导入方式</h3><p>打开：</p>
+<pre><code class="language-text">repro/libslib_prepatch_rebuilt.so
+</code></pre>
+<p>处理器选择：</p>
+<pre><code class="language-text">AArch64 / ARM64 little-endian
+</code></pre>
+<p>确认 payload 和函数的虚拟偏移保持一致。</p>
+<h3 id="12-2-多个-IDA-实例不能混用"><a href="#12-2-多个-IDA-实例不能混用" class="headerlink" title="12.2 多个 IDA 实例不能混用"></a>12.2 多个 IDA 实例不能混用</h3><p>本次同时存在两个 IDA 实例：</p>
+<pre><code class="language-text">127.0.0.1:13337  原始外层 libslib.so
+127.0.0.1:13338  隐藏 ELF prepatch
+</code></pre>
+<p>同一个地址，例如 <code>0x161b4</code>，在不同 IDB 中含义完全不同。一次分析前必须确认当前实例：</p>
+<pre><code class="language-text">active instance = 127.0.0.1:13338
+binary          = libslib_prepatch_rebuilt.so
+</code></pre>
+<p>混用实例是本次最危险的错误之一，因为工具可能返回看似合理但完全错误的汇编。</p>
+<h3 id="12-3-函数定位"><a href="#12-3-函数定位" class="headerlink" title="12.3 函数定位"></a>12.3 函数定位</h3><p>目标 image offset：</p>
+<pre><code class="language-text">0x12ac4  nativeNewCalculateS wrapper
+0x161b4  calculate_s_mode3
+0x2c50c  md5_digest
+0x18444  sha512_digest
+</code></pre>
+<p>使用 IDA：</p>
+<pre><code class="language-text">G -&gt; 输入地址
+P -&gt; 定义函数
+F5 -&gt; 反编译
+X -&gt; 看引用
+N -&gt; 重命名
+; -&gt; 添加注释
+</code></pre>
+<h3 id="12-4-函数类型设置"><a href="#12-4-函数类型设置" class="headerlink" title="12.4 函数类型设置"></a>12.4 函数类型设置</h3><p>mode 3 入口使用了非标准参数寄存器：</p>
+<pre><code class="language-c">void __usercall calculate_s_mode3(
+    RecoveredStdString *uid@&lt;X0&gt;,
+    RecoveredStdString *secret32@&lt;X1&gt;,
+    RecoveredStdString *device_code@&lt;X2&gt;,
+    RecoveredStdString *output@&lt;X8&gt;
+);
+</code></pre>
+<p>SHA-512 wrapper 的正确原型包含第 4 个参数：</p>
+<pre><code class="language-c">void __fastcall sha512_digest(
+    const void *data,
+    unsigned long long size,
+    unsigned char output64[64],
+    int iv_variant
+);
+</code></pre>
+<p>曾经只写成三个参数，后来看到函数开头的 <code>v3</code> 实际来自 <code>W3</code>，因此修正为四参数。调用点：</p>
+<pre><code class="language-asm">16CA0  MOV W3, WZR
+16CA4  BL  sha512_digest
+
+16E18  MOV W3, WZR
+16E20  BL  sha512_digest
+</code></pre>
+<h3 id="12-5-重命名结果"><a href="#12-5-重命名结果" class="headerlink" title="12.5 重命名结果"></a>12.5 重命名结果</h3><p>当前隐藏 ELF IDB 中已使用：</p>
+<pre><code class="language-text">0x17618  sha512_compress_block
+0x17c54  sha512_update
+0x17fdc  sha512_final
+0x17440  bytes_to_lower_hex
+0x15930  std_string_concat
+0x16044  std_string_assign_cstr
+0x32c50  std_string_push_back_char
+</code></pre>
+<p>重命名的原则：名称只表达已经有证据证明的行为，不要过早给未知函数加具体业务名。</p>
+<hr>
+<h2 id="13-第十步：识别-MD5"><a href="#13-第十步：识别-MD5" class="headerlink" title="13. 第十步：识别 MD5"></a>13. 第十步：识别 MD5</h2><h3 id="13-1-标准初始向量"><a href="#13-1-标准初始向量" class="headerlink" title="13.1 标准初始向量"></a>13.1 标准初始向量</h3><p>在 <code>0x2c50c</code> 附近看到：</p>
+<pre><code class="language-text">01 23 45 67 89 ab cd ef fe dc ba 98 76 54 32 10
+</code></pre>
+<p>按小端解释为：</p>
+<pre><code class="language-text">0x67452301
+0xefcdab89
+0x98badcfe
+0x10325476
+</code></pre>
+<p>这是标准 MD5 初始状态。</p>
+<h3 id="13-2-MD5-final-的识别方法"><a href="#13-2-MD5-final-的识别方法" class="headerlink" title="13.2 MD5 final 的识别方法"></a>13.2 MD5 final 的识别方法</h3><p>MD5 final 的关键证据：</p>
+<ol>
+<li>读取累计字节数。</li>
+<li>左移 3 位得到 bit length。</li>
+<li>对当前长度 <code>% 64</code>。</li>
+<li>根据是否小于 56 决定补到 56 或 120。</li>
+<li>追加 <code>0x80</code> 和零。</li>
+<li>追加 8 字节长度。</li>
+<li>输出四个 32 位状态，共 16 字节。</li>
+</ol>
+<p>典型逻辑：</p>
+<pre><code class="language-c">used = length % 64;
+if (used &lt; 56)
+    padding = 56 - used;
+else
+    padding = 120 - used;
+
+bit_length = length * 8;
+update(ctx, padding_bytes, padding);
+update(ctx, &amp;bit_length, 8);
+write_digest_16_bytes(ctx, output);
+</code></pre>
+<h3 id="13-3-MD5-的三个调用"><a href="#13-3-MD5-的三个调用" class="headerlink" title="13.3 MD5 的三个调用"></a>13.3 MD5 的三个调用</h3><p>mode 3 中 <code>md5_digest</code> 被调用三次，输入分别是：</p>
+<pre><code class="language-text">uid
+device_code
+secret32
+</code></pre>
+<p>顺序可以通过动态日志和三处调用点共同确认。最终逻辑中变量命名为：</p>
+<pre><code class="language-text">U = MD5(uid)
+D = MD5(device_code)
+S = MD5(secret32)
+</code></pre>
+<hr>
+<h2 id="14-第十一步：识别-SHA-512"><a href="#14-第十一步：识别-SHA-512" class="headerlink" title="14. 第十一步：识别 SHA-512"></a>14. 第十一步：识别 SHA-512</h2><h3 id="14-1-SHA-512-初始向量"><a href="#14-1-SHA-512-初始向量" class="headerlink" title="14.1 SHA-512 初始向量"></a>14.1 SHA-512 初始向量</h3><p>在 <code>0xEA50</code> 附近找到：</p>
+<pre><code class="language-text">08 C9 BC F3 67 E6 09 6A
+3B A7 CA 84 85 AE 67 BB
+</code></pre>
+<p>按小端解释：</p>
+<pre><code class="language-text">0x6A09E667F3BCC908
+0xBB67AE8584CAA73B
+</code></pre>
+<p>这是标准 SHA-512 初始向量。</p>
+<h3 id="14-2-四个-int128-为什么是八个状态"><a href="#14-2-四个-int128-为什么是八个状态" class="headerlink" title="14.2 四个 __int128 为什么是八个状态"></a>14.2 四个 <code>__int128</code> 为什么是八个状态</h3><p>包装函数中：</p>
+<pre><code class="language-c">v69 = v18;
+v70 = v17;
+v71 = v16;
+v72 = v15;
+</code></pre>
+<p>每个 <code>__int128</code> 是 16 字节，四个变量合计：</p>
+<pre><code class="language-text">4 * 16 = 64 bytes = 512 bits = 8 * uint64_t
+</code></pre>
+<p>所以它们就是：</p>
+<pre><code class="language-c">H[0] 到 H[7]
+</code></pre>
+<p>IDA 使用 SIMD 寄存器一次装载两个 64 位值，因此显示成 <code>__int128</code>。</p>
+<h3 id="14-3-SHA-512-的三层函数"><a href="#14-3-SHA-512-的三层函数" class="headerlink" title="14.3 SHA-512 的三层函数"></a>14.3 SHA-512 的三层函数</h3><p>包装函数：</p>
+<pre><code class="language-text">0x18444 sha512_digest
+</code></pre>
+<p>更新函数：</p>
+<pre><code class="language-text">0x17c54 sha512_update
+</code></pre>
+<p>压缩函数：</p>
+<pre><code class="language-text">0x17618 sha512_compress_block
+</code></pre>
+<p>收尾函数：</p>
+<pre><code class="language-text">0x17fdc sha512_final
+</code></pre>
+<h3 id="14-4-128-字节分组证据"><a href="#14-4-128-字节分组证据" class="headerlink" title="14.4 128 字节分组证据"></a>14.4 128 字节分组证据</h3><p>在 <code>sha512_update</code> 中看到：</p>
+<pre><code class="language-asm">17F18  MOV X0, X21
+17F1C  MOV X1, X20
+17F20  BL  sha512_compress_block
+17F24  MOV W9, #0xEE62
+17F28  ADD X20, X20, #0x80
+17F2C  SUB X19, X19, #0x80
+</code></pre>
+<p>这直接说明：</p>
+<pre><code class="language-c">while (size &gt;= 128) {
+    sha512_compress_block(ctx, data);
+    data += 128;
+    size -= 128;
+}
+</code></pre>
+<p>SHA-512 的分组大小是 128 字节。</p>
+<h3 id="14-5-80-轮压缩证据"><a href="#14-5-80-轮压缩证据" class="headerlink" title="14.5 80 轮压缩证据"></a>14.5 80 轮压缩证据</h3><p>在 <code>sha512_compress_block</code> 中搜索：</p>
+<pre><code class="language-asm">CMP W9, #0x50
+</code></pre>
+<p><code>0x50 = 80</code>，说明循环计数器走 80 轮。这和 SHA-512 标准一致。</p>
+<h3 id="14-6-64-字节输出证据"><a href="#14-6-64-字节输出证据" class="headerlink" title="14.6 64 字节输出证据"></a>14.6 64 字节输出证据</h3><p>在 <code>sha512_final</code> 的 <code>0x1814c-0x183ec</code>，连续把八个 64 位状态按大端序拆成 64 个字节：</p>
+<pre><code class="language-asm">LDR X8, [X20,#0x10]
+LSR X8, X8, #0x28
+STRB W8, [X19,#2]
+...
+LDR X8, [X20,#0x48]
+STRB W8, [X19,#0x3F]
+</code></pre>
+<p>计算：</p>
+<pre><code class="language-text">8 个状态 * 8 字节 = 64 字节
+</code></pre>
+<p>所以 <code>sha512_digest</code> 的输出就是标准 64 字节摘要。</p>
+<h3 id="14-7-SHA-512-padding"><a href="#14-7-SHA-512-padding" class="headerlink" title="14.7 SHA-512 padding"></a>14.7 SHA-512 padding</h3><p><code>sha512_final</code> 中：</p>
+<pre><code class="language-asm">AND X24, X8, #0x7F  ; length % 128
+CMP X24, #0x70      ; 比较 112
+</code></pre>
+<p>如果当前长度小于 112，就补到 112；否则补到 240，然后追加 16 字节 bit length：</p>
+<pre><code class="language-asm">BL sha512_update    ; padding
+MOV W2, #0x10
+BL sha512_update    ; 16-byte length
+</code></pre>
+<p>这也是 SHA-512 的标准收尾结构。</p>
+<hr>
+<h2 id="15-第十二步：识别小写-hex-转换"><a href="#15-第十二步：识别小写-hex-转换" class="headerlink" title="15. 第十二步：识别小写 hex 转换"></a>15. 第十二步：识别小写 hex 转换</h2><h3 id="15-1-hex-表"><a href="#15-1-hex-表" class="headerlink" title="15.1 hex 表"></a>15.1 hex 表</h3><p>在 <code>0xEA90</code> 找到：</p>
+<pre><code class="language-text">0123456789abcdef
+</code></pre>
+<p>没有找到对应的大写表，所以输出是小写 hex。</p>
+<h3 id="15-2-std-string-push-back-char-不是混淆函数"><a href="#15-2-std-string-push-back-char-不是混淆函数" class="headerlink" title="15.2 std_string_push_back_char 不是混淆函数"></a>15.2 <code>std_string_push_back_char</code> 不是混淆函数</h3><p><code>0x32c50</code> 的汇编：</p>
+<pre><code class="language-asm">ADRP X16, #0x37410@PAGE
+LDR  X17, [X16,#0x37410@PAGEOFF]
+ADD  X16, X16, #0x37410@PAGEOFF
+BR   X17
+</code></pre>
+<p>这是 GOT 间接跳板，不是算法混淆。真实函数地址由运行时重定位填入 <code>0x37410</code>，当前静态 dump 中可能是 <code>0</code>。</p>
+<p>判断方法：</p>
+<pre><code class="language-text">只有 ADRP/LDR/ADD/BR，没有循环和算法运算 -&gt; thunk 或导入跳板
+</code></pre>
+<p>调用点中：</p>
+<pre><code class="language-text">X0 = std::string*
+W1 = 一个字符
+</code></pre>
+<p>且每个 digest 字节调用两次，因此可以高置信度命名为：</p>
+<pre><code class="language-text">std_string_push_back_char
+</code></pre>
+<h3 id="15-3-高低半字节"><a href="#15-3-高低半字节" class="headerlink" title="15.3 高低半字节"></a>15.3 高低半字节</h3><p>mode 3 的 hex 循环关键指令：</p>
+<pre><code class="language-asm">CMP W8, #0x10       ; 16 个 digest 字节
+LDRB W19, [X8,X28]  ; 读取 digest[i]
+ORR X8, X8, X19,LSR#4
+LDRB W1, [X8]       ; hex_table[byte &gt;&gt; 4]
+BL  std_string_push_back_char
+BFXIL X8, X19, #0, #4
+LDRB W1, [X8]       ; hex_table[byte &amp; 0x0F]
+BL  std_string_push_back_char
+</code></pre>
+<p>等价于：</p>
+<pre><code class="language-c">high = byte &gt;&gt; 4;
+low = byte &amp; 0x0F;
+output.push_back(hex_table[high]);
+output.push_back(hex_table[low]);
+</code></pre>
+<hr>
+<h2 id="16-第十三步：恢复-mode-3-数据流"><a href="#16-第十三步：恢复-mode-3-数据流" class="headerlink" title="16. 第十三步：恢复 mode 3 数据流"></a>16. 第十三步：恢复 mode 3 数据流</h2><h3 id="16-1-第一次-SHA-512"><a href="#16-1-第一次-SHA-512" class="headerlink" title="16.1 第一次 SHA-512"></a>16.1 第一次 SHA-512</h3><p>第一次调用点：</p>
+<pre><code class="language-asm">16C90  BL  sub_32BE0          ; 获取输入长度
+16C94  MOV X1, X0              ; size
+16C98  ADD X2, SP, ...output64 ; output
+16C9C  MOV X0, X20             ; data
+16CA0  MOV W3, WZR             ; 标准 IV
+16CA4  BL  sha512_digest
+16CB4  BL  bytes_to_lower_hex  ; 64 bytes -&gt; 128 chars
+</code></pre>
+<p>在它之前，字符串拼接逻辑得到：</p>
+<pre><code class="language-text">secret_md5_hex + device_md5_hex + uid_md5_hex
+</code></pre>
+<p>因此：</p>
+<pre><code class="language-text">primary = SHA512(S + D + U).hexdigest()
+</code></pre>
+<h3 id="16-2-第二次-SHA-512"><a href="#16-2-第二次-SHA-512" class="headerlink" title="16.2 第二次 SHA-512"></a>16.2 第二次 SHA-512</h3><p>第二次调用点：</p>
+<pre><code class="language-asm">16E08  BL  sub_32BE0
+16E0C  MOV X1, X0
+16E10  SUB X2, ...var_58
+16E14  MOV X0, X20
+16E18  MOV W3, WZR
+16E20  BL  sha512_digest
+16E30  BL  bytes_to_lower_hex
+</code></pre>
+<p>这次的输入字符串是：</p>
+<p>因此：</p>
+<pre><code class="language-text">selector = SHA512(D + U).hexdigest()
+</code></pre>
+<h3 id="16-3-sub-15930-和-sub-17440"><a href="#16-3-sub-15930-和-sub-17440" class="headerlink" title="16.3 sub_15930 和 sub_17440"></a>16.3 <code>sub_15930</code> 和 <code>sub_17440</code></h3><p>通过调用参数和副作用识别出：</p>
+<pre><code class="language-text">0x15930 std_string_concat
+0x17440 bytes_to_lower_hex
+0x16044 std_string_assign_cstr
+</code></pre>
+<p><code>std_string_concat</code> 的识别依据：</p>
+<ul>
+<li>读取两个 <code>std::string</code> 的长度和数据指针。</li>
+<li>计算总长度。</li>
+<li>分配或扩展目标字符串。</li>
+<li>连续复制两段数据。</li>
+<li>写入 <code>\0</code> 结尾。</li>
+</ul>
+<p><code>bytes_to_lower_hex</code> 的识别依据：</p>
+<ul>
+<li>输入长度为摘要字节数。</li>
+<li>每个输入字节生成两个字符。</li>
+<li>使用高低 4 位。</li>
+<li>追加到 <code>std::string</code>。</li>
+</ul>
+<hr>
+<h2 id="17-第十四步：恢复最终-8-轮选择算法"><a href="#17-第十四步：恢复最终-8-轮选择算法" class="headerlink" title="17. 第十四步：恢复最终 8 轮选择算法"></a>17. 第十四步：恢复最终 8 轮选择算法</h2><h3 id="17-1-循环计数"><a href="#17-1-循环计数" class="headerlink" title="17.1 循环计数"></a>17.1 循环计数</h3><p>关键位置：</p>
+<pre><code class="language-asm">16E7C  CMP W8, #8
+</code></pre>
+<p>说明循环执行 8 轮。</p>
+<h3 id="17-2-计算-15-round"><a href="#17-2-计算-15-round" class="headerlink" title="17.2 计算 15 * round"></a>17.2 计算 <code>15 * round</code></h3><p>关键指令：</p>
+<pre><code class="language-asm">16ED0  LSL W16, W8, #4
+16ED4  SUB W16, W16, W8
+</code></pre>
+<p>等价于：</p>
+<pre><code class="language-c">base = (round &lt;&lt; 4) - round;
+base = 16 * round - round;
+base = 15 * round;
+</code></pre>
+<h3 id="17-3-使用-selector-更新-cursor"><a href="#17-3-使用-selector-更新-cursor" class="headerlink" title="17.3 使用 selector 更新 cursor"></a>17.3 使用 selector 更新 cursor</h3><p>逻辑可整理成：</p>
+<pre><code class="language-c">selector_index = 15 * round + cursor;
+selector_byte = selector_hex[selector_index];
+cursor = selector_byte &amp; 0x0F;
+</code></pre>
+<p>因为 selector 已经是 ASCII hex 字符，所以：</p>
+<pre><code class="language-text">ASCII(&#39;1&#39;) &amp; 0x0f = 1
+ASCII(&#39;a&#39;) &amp; 0x0f = 1
+ASCII(&#39;9&#39;) &amp; 0x0f = 9
+ASCII(&#39;f&#39;) &amp; 0x0f = 6
+</code></pre>
+<h3 id="17-4-从-primary-取字符"><a href="#17-4-从-primary-取字符" class="headerlink" title="17.4 从 primary 取字符"></a>17.4 从 primary 取字符</h3><pre><code class="language-c">primary_index = 15 * round + cursor;
+result[round] = primary_hex[primary_index];
+</code></pre>
+<p>关键写入：</p>
+<pre><code class="language-asm">16EEC  LDRB W16, [X13,W16,SXTW]
+16EEC  STRB W16, [X20,W8,SXTW]
+</code></pre>
+<p>这说明每轮取一个字符写入最终 8 字节输出。</p>
+<hr>
+<h2 id="18-Python-独立复现"><a href="#18-Python-独立复现" class="headerlink" title="18. Python 独立复现"></a>18. Python 独立复现</h2><p>完整文件是当前目录的 <code>calculate_s.py</code>：</p>
+<pre><code class="language-python">#!/usr/bin/env python3
+import argparse
+import hashlib
+
+
+def md5_hex(value: str) -&gt; str:
+    return hashlib.md5(value.encode(&quot;utf-8&quot;)).hexdigest()
+
+
+def calculate_s(uid: str, secret32: str, device_code: str) -&gt; str:
+    uid_md5 = md5_hex(uid)
+    secret_md5 = md5_hex(secret32)
+    device_md5 = md5_hex(device_code)
+
+    primary = hashlib.sha512(
+        (secret_md5 + device_md5 + uid_md5).encode(&quot;ascii&quot;)
+    ).hexdigest()
+
+    selector = hashlib.sha512(
+        (device_md5 + uid_md5).encode(&quot;ascii&quot;)
+    ).hexdigest()
+
+    cursor = 0
+    result = []
+    for round_index in range(8):
+        cursor = ord(selector[15 * round_index + cursor]) &amp; 0x0F
+        result.append(primary[15 * round_index + cursor])
+
+    return &quot;&quot;.join(result)
+
+
+def main() -&gt; None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(&quot;uid&quot;)
+    parser.add_argument(&quot;secret32&quot;)
+    parser.add_argument(&quot;device_code&quot;)
+    args = parser.parse_args()
+    print(calculate_s(args.uid, args.secret32, args.device_code))
+
+
+if __name__ == &quot;__main__&quot;:
+    main()
+</code></pre>
+<p>执行：</p>
+<pre><code class="language-powershell">python &quot;.\calculate_s.py&quot; `
+  &quot;8225577424&quot; `
+  &quot;5l0WXnhiY4pJ794KIJ7Rw5F45VXg9sjo&quot; `
+  &quot;10G4095010&quot;
+</code></pre>
+<p>输出：</p>
+<pre><code class="language-text">317bb874
+</code></pre>
+<hr>
+<h2 id="19-动态中间值验证"><a href="#19-动态中间值验证" class="headerlink" title="19. 动态中间值验证"></a>19. 动态中间值验证</h2><p>本次关键动态日志：</p>
+<pre><code class="language-text">md5(&quot;8225577424&quot;)
+  = ed6d230c520493f99a8a9cc4781753ab
+
+md5(&quot;10G4095010&quot;)
+  = a035dc52bf4e85554ca22cdc31822d08
+
+md5(&quot;5l0WXnhiY4pJ794KIJ7Rw5F45VXg9sjo&quot;)
+  = 185fa820bc8d329ecee24c3d982cfb41
+
+sha512(
+  &quot;185fa820bc8d329ecee24c3d982cfb41&quot;
+  + &quot;a035dc52bf4e85554ca22cdc31822d08&quot;
+  + &quot;ed6d230c520493f99a8a9cc4781753ab&quot;
+)
+  = 3f385851c149ff01d91126932bad42d4669a7ebdecef77538ab12e5219d67adf530edb3528e2e8d47d0c66df301d47b3639038f5fad3ada4ae5ff97ea2b7e766
+
+sha512(
+  &quot;a035dc52bf4e85554ca22cdc31822d08&quot;
+  + &quot;ed6d230c520493f99a8a9cc4781753ab&quot;
+)
+  = bb8c5ef3272a22c38c4fe73cc4d36f84d628fb7ae6186d166d65a23c863d855da9305699819174519232b1556c9a3d9586aebc6e96c06fce9b3eff92f1b15ecc
+
+native result = 317bb874
+</code></pre>
+<p>验证不应只比较最后 8 个字符。正确的验证顺序是：</p>
+<pre><code class="language-text">输入是否一致
+  -&gt; 三个 MD5 是否一致
+  -&gt; 第一次 SHA-512 输入和输出是否一致
+  -&gt; 第二次 SHA-512 输入和输出是否一致
+  -&gt; 最终 8 轮选择是否一致
+  -&gt; native 输出和 Python 输出是否一致
+</code></pre>
+<hr>
+<h2 id="20-本次犯过的错误和解决办法"><a href="#20-本次犯过的错误和解决办法" class="headerlink" title="20. 本次犯过的错误和解决办法"></a>20. 本次犯过的错误和解决办法</h2><h3 id="20-1-把-WBSecurity-当成-s-算法"><a href="#20-1-把-WBSecurity-当成-s-算法" class="headerlink" title="20.1 把 WBSecurity 当成 s 算法"></a>20.1 把 WBSecurity 当成 <code>s</code> 算法</h3><p>错误原因：看到 <code>security</code>、<code>signature</code> 等名字就直接联想到请求签名。</p>
+<p>解决：回到 Java 调用链，确认 <code>s</code> 来自 <code>SLib.newCalculateS(uid, 3)</code>；WBSecurity 只是外层解包&#x2F;完整性检测。</p>
+<h3 id="20-2-在外层-IDB-中盲目寻找算法"><a href="#20-2-在外层-IDB-中盲目寻找算法" class="headerlink" title="20.2 在外层 IDB 中盲目寻找算法"></a>20.2 在外层 IDB 中盲目寻找算法</h3><p>错误原因：认为所有代码都应该在磁盘上的 <code>libslib.so</code> 中。</p>
+<p>解决：看到 APK&#x2F;ZIP 读取、ELF 解析、<code>mmap</code>、<code>mprotect</code>、<code>dlopen</code>、<code>dlsym</code> 后，确认这是 Loader，转向动态 dump 隐藏 ELF。</p>
+<h3 id="20-3-把随机状态常量当成密钥"><a href="#20-3-把随机状态常量当成密钥" class="headerlink" title="20.3 把随机状态常量当成密钥"></a>20.3 把随机状态常量当成密钥</h3><p>错误原因：混淆伪代码中出现很多十六进制常量。</p>
+<p>解决：先追踪真实副作用和数据读写，忽略状态编号；哈希初始向量、输出缓冲区和真实调用比随机状态常量更有价值。</p>
+<h3 id="20-4-忽略-Java-缓存"><a href="#20-4-忽略-Java-缓存" class="headerlink" title="20.4 忽略 Java 缓存"></a>20.4 忽略 Java 缓存</h3><p>错误原因：重复调用相同 UID，却发现 native hook 不再触发。</p>
+<p>解决：识别 <code>js.a</code> 的 <code>G/H</code> 缓存；重启进程、换 UID 或清空缓存。</p>
+<h3 id="20-5-Frida-server-重复启动"><a href="#20-5-Frida-server-重复启动" class="headerlink" title="20.5 Frida server 重复启动"></a>20.5 Frida server 重复启动</h3><p>错误现象：</p>
+<pre><code class="language-text">Address already in use
+</code></pre>
+<p>解决：先检查已有 server PID 和端口，不要重复启动；必要时结束旧实例，再启动一个版本匹配的 server。</p>
+<h3 id="20-6-把-spawn-超时直接判断为反调试"><a href="#20-6-把-spawn-超时直接判断为反调试" class="headerlink" title="20.6 把 spawn 超时直接判断为反调试"></a>20.6 把 spawn 超时直接判断为反调试</h3><p>错误原因：完整脚本失败时没有先做最小探针。</p>
+<p>解决：按 ADB、server、版本、端口、最小 spawn、脚本 API 的层次逐步排查。最终确认是旧 server 会话状态问题，没有证据证明是应用反调试。</p>
+<h3 id="20-7-使用了不兼容的-Frida-API-形式"><a href="#20-7-使用了不兼容的-Frida-API-形式" class="headerlink" title="20.7 使用了不兼容的 Frida API 形式"></a>20.7 使用了不兼容的 Frida API 形式</h3><p>错误表现：<code>attachModuleObserver</code> 不可用、<code>enumerateRangesSync</code> 参数差异、匿名 range 的 <code>file</code> 字段异常。</p>
+<p>解决：增加轮询 fallback、兼容两种 <code>enumerateRangesSync</code> 参数、使用 <code>range.file == null</code>。</p>
+<h3 id="20-8-只-dump-r-x-段"><a href="#20-8-只-dump-r-x-段" class="headerlink" title="20.8 只 dump r-x 段"></a>20.8 只 dump <code>r-x</code> 段</h3><p>错误原因：认为代码段就是全部算法。</p>
+<p>解决：补 dump <code>rwx</code>、<code>rw-</code> 和尾部数据段，同时保存 metadata。否则全局数据、GOT、查找表和重定位引用不完整。</p>
+<h3 id="20-9-dump-时机太早或固定等待"><a href="#20-9-dump-时机太早或固定等待" class="headerlink" title="20.9 dump 时机太早或固定等待"></a>20.9 dump 时机太早或固定等待</h3><p>错误原因：固定等待几秒后只 dump 一次。</p>
+<p>解决：使用 <code>RegisterNatives</code> 和第一次真实 <code>nativeNewCalculateS</code> 作为同步点，并在函数返回后重新检查 maps，补抓延迟出现的数据段。</p>
+<h3 id="20-10-混用了不同运行的-dump"><a href="#20-10-混用了不同运行的-dump" class="headerlink" title="20.10 混用了不同运行的 dump"></a>20.10 混用了不同运行的 dump</h3><p>错误原因：不同运行的绝对地址都看起来像隐藏 ELF，直接拼接或交叉使用。</p>
+<p>解决：每轮保存自己的 <code>payload_metadata.json</code>、<code>nativeNewCalculateS.json</code> 和对应 dump；只使用同一轮 metadata 指向的段。</p>
+<h3 id="20-11-把自修改-trampoline-当作真实函数体"><a href="#20-11-把自修改-trampoline-当作真实函数体" class="headerlink" title="20.11 把自修改 trampoline 当作真实函数体"></a>20.11 把自修改 trampoline 当作真实函数体</h3><p>错误现象：目标入口只有几条 <code>LDR/BR</code>，IDA 函数体看起来不完整。</p>
+<p>解决：对比运行前后字节，使用 prepatch 快照恢复入口，并在 IDA 中重新定义 <code>calculate_s_mode3</code>。</p>
+<h3 id="20-12-把-sub-32C50-当成混淆函数"><a href="#20-12-把-sub-32C50-当成混淆函数" class="headerlink" title="20.12 把 sub_32C50 当成混淆函数"></a>20.12 把 <code>sub_32C50</code> 当成混淆函数</h3><p>错误原因：函数名未知且调用位置在混淆代码中。</p>
+<p>解决：看到它只有 <code>ADRP/LDR/ADD/BR</code>，判断为 GOT thunk；结合 <code>X0=std::string*</code>、<code>W1=char</code> 和调用效果，命名为 <code>std_string_push_back_char</code>。</p>
+<h3 id="20-13-忽略-SHA-512-的第-4-个参数"><a href="#20-13-忽略-SHA-512-的第-4-个参数" class="headerlink" title="20.13 忽略 SHA-512 的第 4 个参数"></a>20.13 忽略 SHA-512 的第 4 个参数</h3><p>错误原因：IDA 伪代码中的 <code>v3</code> 看起来像未初始化局部变量。</p>
+<p>解决：回看函数入口和调用约定。ARM64 的第 4 个整数参数在 <code>W3</code>，调用点明确执行 <code>MOV W3, WZR</code>，因此修正原型为四参数。</p>
+<h3 id="20-14-把-TPIDR-EL0-0x28-当成摘要状态"><a href="#20-14-把-TPIDR-EL0-0x28-当成摘要状态" class="headerlink" title="20.14 把 TPIDR_EL0 + 0x28 当成摘要状态"></a>20.14 把 <code>TPIDR_EL0 + 0x28</code> 当成摘要状态</h3><p>错误原因：它出现在函数开头，并参与后面的比较。</p>
+<p>解决：识别 ARM64 stack canary：</p>
+<pre><code class="language-asm">MRS X8, TPIDR_EL0
+LDR X8, [X8,#0x28]
+STR X8, [stack]
+</code></pre>
+<p>函数结尾再次读取并比较，这是栈保护，不是 64 字节哈希分组。</p>
+<h3 id="20-15-混淆了不同样本的结果"><a href="#20-15-混淆了不同样本的结果" class="headerlink" title="20.15 混淆了不同样本的结果"></a>20.15 混淆了不同样本的结果</h3><p>错误原因：早期记录中有 <code>2032848787248 -&gt; 5feb09b6</code>，最终日志是 <code>8225577424 -&gt; 317bb874</code>。</p>
+<p>解决：给每个样本保存独立输入、日志和输出。本文明确以最终样本为主。</p>
+<hr>
+<h2 id="21-IDA-中识别常见算法的方法"><a href="#21-IDA-中识别常见算法的方法" class="headerlink" title="21. IDA 中识别常见算法的方法"></a>21. IDA 中识别常见算法的方法</h2><h3 id="21-1-识别-MD5"><a href="#21-1-识别-MD5" class="headerlink" title="21.1 识别 MD5"></a>21.1 识别 MD5</h3><p>搜索标准初始向量：</p>
+<pre><code class="language-text">01 23 45 67 89 ab cd ef fe dc ba 98 76 54 32 10
+</code></pre>
+<p>再检查：</p>
+<ul>
+<li>64 字节分组。</li>
+<li>四个 32 位状态。</li>
+<li><code>0x80</code> padding。</li>
+<li>64 位 bit length。</li>
+<li>16 字节输出。</li>
+</ul>
+<h3 id="21-2-识别-SHA-512"><a href="#21-2-识别-SHA-512" class="headerlink" title="21.2 识别 SHA-512"></a>21.2 识别 SHA-512</h3><p>搜索：</p>
+<pre><code class="language-text">08 C9 BC F3 67 E6 09 6A
+3B A7 CA 84 85 AE 67 BB
+</code></pre>
+<p>再检查：</p>
+<ul>
+<li>128 字节分组。</li>
+<li>八个 64 位状态。</li>
+<li>80 轮。</li>
+<li>16 字节长度字段。</li>
+<li>64 字节大端输出。</li>
+</ul>
+<h3 id="21-3-识别-hex-转换"><a href="#21-3-识别-hex-转换" class="headerlink" title="21.3 识别 hex 转换"></a>21.3 识别 hex 转换</h3><p>寻找：</p>
+<pre><code class="language-text">0123456789abcdef
+</code></pre>
+<p>或观察：</p>
+<pre><code class="language-asm">LSR reg, #4
+AND reg, #0xF
+</code></pre>
+<p>再看是否每个输入字节产生两个输出字符。</p>
+<h3 id="21-4-识别字符串拼接"><a href="#21-4-识别字符串拼接" class="headerlink" title="21.4 识别字符串拼接"></a>21.4 识别字符串拼接</h3><p>关注：</p>
+<ul>
+<li>读取两个字符串长度。</li>
+<li>计算长度和。</li>
+<li>目标容量检查。</li>
+<li>两段连续复制。</li>
+<li>末尾写零。</li>
+</ul>
+<p>不要只依赖函数名，因为 libc++ 符号可能被裁剪或通过 GOT 间接调用。</p>
+<hr>
+<h2 id="22-可复用的标准工作流"><a href="#22-可复用的标准工作流" class="headerlink" title="22. 可复用的标准工作流"></a>22. 可复用的标准工作流</h2><h3 id="A-Java-层"><a href="#A-Java-层" class="headerlink" title="A. Java 层"></a>A. Java 层</h3><pre><code class="language-text">[ ] 找请求参数写入点
+[ ] 追踪字段赋值
+[ ] 找 Java wrapper
+[ ] 确认 native 方法签名
+[ ] 确认输入预处理
+[ ] 检查缓存
+[ ] 确认加载的 so
+</code></pre>
+<h3 id="B-外层-so"><a href="#B-外层-so" class="headerlink" title="B. 外层 so"></a>B. 外层 so</h3><pre><code class="language-text">[ ] 搜索 JNI_OnLoad
+[ ] 搜索 RegisterNatives
+[ ] 搜索 Java_ 静态导出
+[ ] 搜索类名和方法名
+[ ] 检查 WBSecurity 等可见注册
+[ ] 检查 ZIP/APK 读取
+[ ] 检查 ELF Header/Program Header
+[ ] 检查 mmap/mprotect
+[ ] 检查 dlopen/dlsym
+[ ] 找隐藏 JNI_OnLoad 保存点和调用点
+</code></pre>
+<h3 id="C-Frida"><a href="#C-Frida" class="headerlink" title="C. Frida"></a>C. Frida</h3><pre><code class="language-text">[ ] 检查 ADB
+[ ] 检查 frida-server
+[ ] 检查版本匹配
+[ ] 检查 27042 端口
+[ ] 最小 spawn 探针
+[ ] hook RegisterNatives
+[ ] 获取真实 fnPtr
+[ ] 记录 image base 和相对偏移
+[ ] dump 所有关联内存段
+[ ] hook 目标入口和中间摘要函数
+</code></pre>
+<h3 id="D-IDA"><a href="#D-IDA" class="headerlink" title="D. IDA"></a>D. IDA</h3><pre><code class="language-text">[ ] 确认当前 IDB 实例
+[ ] 导入 ARM64 little-endian ELF
+[ ] 用相对偏移定位目标
+[ ] P 定义函数
+[ ] F5 查看伪代码
+[ ] X 查看交叉引用
+[ ] N 重命名
+[ ] ; 写证据注释
+[ ] 修正函数原型
+[ ] 识别标准算法常量
+[ ] 对照动态输入和输出
+</code></pre>
+<h3 id="E-复现"><a href="#E-复现" class="headerlink" title="E. 复现"></a>E. 复现</h3><pre><code class="language-text">[ ] 先复现每个 MD5
+[ ] 再复现每个 SHA-512
+[ ] 再复现字符串拼接顺序
+[ ] 最后复现选择循环
+[ ] 对比 native 最终结果
+[ ] 保存可回归测试样本
+</code></pre>
+<hr>
+<h2 id="23-关键思路总结"><a href="#23-关键思路总结" class="headerlink" title="23. 关键思路总结"></a>23. 关键思路总结</h2><h3 id="23-1-从业务数据流开始"><a href="#23-1-从业务数据流开始" class="headerlink" title="23.1 从业务数据流开始"></a>23.1 从业务数据流开始</h3><p>最稳的顺序不是：</p>
+<pre><code class="language-text">搜索 MD5 -&gt; 猜算法 -&gt; 猜输入
+</code></pre>
+<p>而是：</p>
+<pre><code class="language-text">请求参数
+  -&gt; Java 赋值
+  -&gt; Java wrapper
+  -&gt; native 声明
+  -&gt; JNI 注册
+  -&gt; 真实函数地址
+  -&gt; 动态输入
+  -&gt; 静态算法
+  -&gt; Python 复现
+</code></pre>
+<h3 id="23-2-静态分析提出假设，动态分析确认事实"><a href="#23-2-静态分析提出假设，动态分析确认事实" class="headerlink" title="23.2 静态分析提出假设，动态分析确认事实"></a>23.2 静态分析提出假设，动态分析确认事实</h3><p>静态分析负责发现：</p>
+<ul>
+<li>可能存在 Loader。</li>
+<li>隐藏入口保存在哪里。</li>
+<li><code>RegisterNatives</code> 可能出现在哪里。</li>
+<li>代码中有 MD5&#x2F;SHA-512 特征。</li>
+</ul>
+<p>动态分析负责确认：</p>
+<ul>
+<li>真实 <code>fnPtr</code>。</li>
+<li>隐藏 image base。</li>
+<li>三个真实输入。</li>
+<li>MD5 和 SHA-512 的实际输入输出。</li>
+<li>native 最终结果。</li>
+</ul>
+<h3 id="23-3-控制流混淆先看副作用"><a href="#23-3-控制流混淆先看副作用" class="headerlink" title="23.3 控制流混淆先看副作用"></a>23.3 控制流混淆先看副作用</h3><p>不要试图先理解所有状态常量。先找到：</p>
+<pre><code class="language-text">函数调用
+内存映射
+全局数据
+哈希状态
+字符串输入输出
+JNI 表
+</code></pre>
+<p>这些动作不容易被混淆改变。</p>
+<h3 id="23-4-地址必须记录相对值"><a href="#23-4-地址必须记录相对值" class="headerlink" title="23.4 地址必须记录相对值"></a>23.4 地址必须记录相对值</h3><p>每次动态运行都记录：</p>
+<pre><code class="language-text">absolute runtime address
+mapping base
+image base
+relative image offset
+对应 metadata 文件
+</code></pre>
+<p>绝对地址只适用于当前进程，相对偏移才适合导入 IDA 和跨运行比较。</p>
+<h3 id="23-5-验证必须逐层进行"><a href="#23-5-验证必须逐层进行" class="headerlink" title="23.5 验证必须逐层进行"></a>23.5 验证必须逐层进行</h3><p>最终输出相同不一定说明算法完全正确。应逐层比较：</p>
+<pre><code class="language-text">输入
+  -&gt; MD5
+  -&gt; SHA-512 输入
+  -&gt; SHA-512 输出
+  -&gt; hex 转换
+  -&gt; 选择索引
+  -&gt; 最终输出
+</code></pre>
+<hr>
+<h2 id="24-最终结果清单"><a href="#24-最终结果清单" class="headerlink" title="24. 最终结果清单"></a>24. 最终结果清单</h2><p>Java：</p>
+<pre><code class="language-text">RequestParam.initUserParam
+  -&gt; js.a(uid)
+  -&gt; SLib.newCalculateS(uid, 3)
+</code></pre>
+<p>Loader：</p>
+<pre><code class="language-text">ZIP/APK -&gt; ExtractToMemory -&gt; mmap -&gt; mprotect
+        -&gt; pre-link -&gt; resolve JNI_OnLoad
+        -&gt; call hidden JNI_OnLoad
+        -&gt; RegisterNatives(com.sina.weibo.security.SLib)
+</code></pre>
+<p>隐藏 ELF 关键偏移：</p>
+<pre><code class="language-text">nativeNewCalculateS  0x12ac4
+calculate_s_mode3    0x161b4
+md5_digest           0x2c50c
+sha512_digest        0x18444
+sha512_update        0x17c54
+sha512_compress      0x17618
+sha512_final         0x17fdc
+hex table            0xea90
+</code></pre>
+<p>当前输入：</p>
+<pre><code class="language-text">uid         8225577424
+secret32    5l0WXnhiY4pJ794KIJ7Rw5F45VXg9sjo
+mode        3
+</code></pre>
+<p>当前结果：</p>
+<pre><code class="language-text">native = 317bb874
+python = 317bb874
+</code></pre>
+<p>总结：</p>
+<pre><code class="language-text">先从 Java 找到真实业务入口，再证明外层 so 是 Loader；
+通过 RegisterNatives 获取隐藏函数地址，dump 完整匿名映射并导入 IDA；
+最后用标准哈希特征、调用参数、动态中间值和 Python 回归测试逐层证明算法。
+</code></pre>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
     <link itemprop="mainEntityOfPage" href="http://alffl1st.github.io/2026/07/31/%E6%9F%90%E5%8D%9A16-4-0%E6%95%B0%E6%8D%AE%E5%8C%85s%E5%80%BC%E9%80%86%E5%90%91/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -2692,65 +4134,6 @@ fastboot reboot recovery #这条是重启到rec的指令，可以直接长按开
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="http://alffl1st.github.io/2025/12/22/GUET-CTF2019-re-1/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="ALFFL">
-      <meta itemprop="description" content="追求源于热爱">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="ALFFL1st">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2025/12/22/GUET-CTF2019-re-1/" class="post-title-link" itemprop="url">[GUET-CTF2019]re 1</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-              
-
-              <time title="创建时间：2025-12-22 15:10:58 / 修改时间：15:11:48" itemprop="dateCreated datePublished" datetime="2025-12-22T15:10:58+08:00">2025-12-22</time>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p><img src="/./images/2025-12-22-15-11-45-PixPin_2025-12-22_15-11-43.jpg"></p>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
 
   
   <nav class="pagination">
@@ -2822,7 +4205,7 @@ fastboot reboot recovery #这条是重启到rec的指令，可以直接长按开
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">19</span>
+          <span class="site-state-item-count">20</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
